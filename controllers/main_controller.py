@@ -5,6 +5,7 @@ from controllers.monitoring_controller import MonitoringController
 from controllers.order_controller import OrderController
 from controllers.production_line_controller import ProductionLineController
 from controllers.sample_controller import SampleController
+from controllers.shipment_controller import ShipmentController
 from repository.order_repository import OrderRepository
 from repository.production_queue_repository import ProductionQueueRepository
 from repository.sample_repository import SampleRepository
@@ -14,6 +15,7 @@ from views.monitoring_view import MonitoringView
 from views.order_view import OrderView
 from views.production_view import ProductionView
 from views.sample_view import SampleView
+from views.shipment_view import ShipmentView
 
 
 class MainController:
@@ -33,6 +35,7 @@ class MainController:
             order_repository, sample_repository, production_queue_repository
         )
         self.monitoring_controller = MonitoringController(order_repository, sample_repository)
+        self.shipment_controller = ShipmentController(order_repository, ShipmentView())
 
     def run(self) -> None:
         is_running = True
@@ -64,6 +67,8 @@ class MainController:
                     self.monitoring_controller.get_inventory_status()
                 )
             elif choice == "7":
+                self.shipment_controller.handle_menu()
+            elif choice == "8":
                 self.main_view.show_goodbye()
                 is_running = False
             else:
