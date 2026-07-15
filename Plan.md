@@ -308,3 +308,55 @@
 
 ### 이번 슬라이스 범위 밖
 - 없음 — 기능 명세의 마지막 항목
+
+**상태: GREEN 완료, REVIEW 승인 완료 (커밋 `afa4421`)**
+
+---
+
+## 슬라이스 8: UX 개선 (화면 정리, 페이지네이션 선택)
+
+기능 명세 7개 항목 구현 완료 후, 사용성 개선 요청 3가지를 반영한다.
+
+### 8-1. 메뉴 진입 시 화면 정리 + 현재 메뉴 헤더 표시
+- 메뉴를 선택할 때마다 콘솔 화면을 지우고, 맨 위에 현재 선택된 메뉴 이름을 표시한다.
+- 순수 화면 출력(터미널 clear + 배너 출력)이며 분기 로직이 없으므로 **테스트 없이** 진행한다 (tdd-skill의 "설정/플러밍" 예외, 기존 `MainController.run()` 루프 자체도 미검증인 것과 동일한 선례).
+- `views/screen.py` (신규): `clear_screen()` — OS별 `cls`/`clear` 실행
+- `views/main_view.py`: `show_screen_header(title)` — 화면을 지우고 현재 메뉴 이름 배너를 출력
+- `controllers/main_controller.py`: 메뉴 선택마다 해당 메뉴 이름으로 헤더를 표시한 뒤 각 컨트롤러 메서드를 호출하도록 변경
+
+### 8-2, 8-3. 공통: 페이지네이션 + 번호 선택
+시료 주문 시 시료 ID를 직접 입력하는 대신, 그리고 주문 승인/거절·출고 처리 시 주문번호를 직접 입력하는 대신, **10개씩 페이지로 보여주고 1부터 다시 매긴 번호로 선택**하도록 변경한다. 세 곳 모두 같은 페이지네이션 로직을 공유한다.
+
+**검증할 동작 (Behavior)**
+
+1. `paginate(items, page_number, page_size=10)` (신규 공용 함수, `controllers/pagination.py`)
+   - 항목이 10개 초과면 첫 페이지에 10개, 다음 페이지에 나머지를 담아 반환한다.
+   - 전체 페이지 수를 올바르게 계산한다.
+   - `page_number`가 1 미만이면 1로, 총 페이지 수를 초과하면 마지막 페이지로 clamp한다.
+   - 항목이 비어 있으면 빈 페이지(0페이지 또는 빈 목록)를 반환한다.
+2. `resolve_page_selection(page, command)` (신규 공용 함수)
+   - `command`가 페이지 내 항목 번호(1부터, 표시된 개수 이내)면 해당 항목을 반환한다.
+   - 범위를 벗어나거나 숫자가 아니면 `None`을 반환한다 (호출 측에서 에러 처리).
+
+**시료 주문(`OrderController.reserve_order`) 변경**
+- 시료 목록을 페이지네이션해서 보여주고, 사용자가 `n`(다음)/`p`(이전)/번호를 입력할 때까지 반복한다.
+- 번호를 선택하면 해당 시료로 진행, 이후 고객명·수량 입력은 기존과 동일한 검증 규칙을 유지한다.
+- 잘못된 번호를 입력하면 에러를 표시하고 종료한다 (재입력을 계속 받지는 않음 — 기존 에러 처리 패턴과 동일).
+
+**주문 승인/거절(`ApprovalController.handle_menu`), 출고 처리(`ShipmentController.handle_menu`) 변경**
+- 대상 주문 목록(RESERVED / CONFIRMED)을 페이지네이션해서 보여주고, `n`/`p`/번호 입력을 반복 처리한다.
+- 번호로 주문을 선택한 뒤의 흐름(승인/거절 선택, 출고 실행)은 기존과 동일하다.
+
+### 작성할 테스트
+- `tests/controllers/test_pagination.py` (신규): `paginate`, `resolve_page_selection` 순수 함수 단위 테스트
+- `tests/controllers/test_order_controller.py`: 시료 선택을 페이지 번호 입력 방식으로 바꾼 시나리오로 재작성 (다음 페이지 이동 후 선택, 잘못된 번호 등)
+- `tests/controllers/test_approval_controller.py`, `test_shipment_controller.py`: 주문번호 텍스트 입력 대신 페이지 번호 선택 방식으로 재작성
+
+### 프로덕션 코드 계획
+- `controllers/pagination.py` (신규): `paginate`, `resolve_page_selection`
+- `controllers/order_controller.py`: `reserve_order()`를 페이지 탐색 루프로 재작성
+- `controllers/approval_controller.py`, `controllers/shipment_controller.py`: `handle_menu()`를 페이지 탐색 루프로 재작성
+- `views/order_view.py`, `views/approval_view.py`, `views/shipment_view.py`: 페이지 표시(`show_..._page`), 페이지 명령 입력(`read_page_command`) 메서드 추가 (테스트 없음)
+
+### 이번 슬라이스 범위 밖
+- 없음

@@ -36,12 +36,24 @@ class MainController:
         )
         self.monitoring_controller = MonitoringController(order_repository, sample_repository)
         self.shipment_controller = ShipmentController(order_repository, ShipmentView())
+        self.menu_titles = {
+            "1": "시료 등록",
+            "2": "시료 조회",
+            "3": "시료 주문(예약)",
+            "4": "주문 승인/거절",
+            "5": "생산 라인 조회",
+            "6": "모니터링",
+            "7": "출고 처리",
+        }
 
     def run(self) -> None:
         is_running = True
         while is_running:
             self.main_view.show_menu()
             choice = self.main_view.read_menu_choice()
+
+            if choice in self.menu_titles:
+                self.main_view.show_screen_header(self.menu_titles[choice])
 
             if choice == "1":
                 self.sample_controller.register_sample()

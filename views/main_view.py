@@ -1,5 +1,14 @@
+from views.screen import clear_screen
+
+
 class MainView:
+    def show_screen_header(self, title: str) -> None:
+        clear_screen()
+        print("===== S-Semi 시료 생산주문관리 시스템 =====")
+        print(f"[ 현재 메뉴: {title} ]")
+
     def show_menu(self) -> None:
+        clear_screen()
         print()
         print("===== S-Semi 시료 생산주문관리 시스템 =====")
         print("1. 시료 등록")
