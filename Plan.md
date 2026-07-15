@@ -131,3 +131,44 @@
 ### 이번 슬라이스 범위 밖
 - 주문 승인/거절, 재고 확인·차감 (슬라이스 4)
 - 생산 라인, 모니터링, 출고 처리 (슬라이스 5~7)
+
+**상태: GREEN 완료, REVIEW 승인 완료 (커밋 `062e2e9`)**
+
+---
+
+## 슬라이스 4: 주문 승인/거절
+
+### 설계 결정
+- 승인 시점에 재고를 확정적으로 반영한다: **재고 충분** → 주문 수량만큼 재고를 즉시 차감하고 `CONFIRMED`. **재고 부족** → 기존 재고를 전부 이 주문에 배정(재고 0으로 차감)하고, 부족분(`주문수량 - 기존재고`)을 생산 큐에 등록한 뒤 `PRODUCING`.
+- 생산 큐는 별도 JSON 저장소(`ProductionQueueRepository`)로 관리하며, **append 순서 = FIFO 순서**로 취급한다 (슬라이스 5에서 실제 소비/생산 처리).
+- 이번 슬라이스는 "승인/거절 판단과 큐 등록"까지만 다룬다. 실 생산량 계산(`ceil(부족분/수율)`), 총 생산 시간, PRODUCING→CONFIRMED 자동 전환은 슬라이스 5.
+- ConsoleMVC PoC에는 이 기능이 없어 참고할 기존 코드가 없다. View는 새로 작성하되, 순수 입출력이라 테스트는 생략한다.
+
+### 검증할 동작 (Behavior)
+
+1. `SampleRepository.decrease_stock(sample_id, amount)`: 재고를 amount만큼 줄이고 영속화한다.
+2. `OrderRepository.update_status(order_id, new_status)`: 주문 상태를 갱신하고 영속화한다.
+3. `ProductionQueueRepository.enqueue(entry)` / `get_all()`: 등록한 순서대로(FIFO) 조회된다.
+4. `ApprovalController.list_pending_orders()`: `RESERVED` 상태 주문만 반환한다 (다른 상태는 제외).
+5. `ApprovalController.approve(order_id)`
+   - 재고가 주문 수량 이상이면: 주문 상태 `CONFIRMED`, 재고는 주문 수량만큼 차감.
+   - 재고가 주문 수량 미만이면: 주문 상태 `PRODUCING`, 재고는 0으로 차감, 생산 큐에 `{order_id, sample_id, shortfall_quantity}` 등록 (`shortfall_quantity = 주문수량 - 기존재고`).
+6. `ApprovalController.reject(order_id)`: 주문 상태 `REJECTED`로 전환, 재고는 변경하지 않는다.
+
+### 작성할 테스트
+- `tests/repository/test_sample_repository.py`: `decrease_stock` 테스트 추가
+- `tests/repository/test_order_repository.py`: `update_status` 테스트 추가
+- `tests/repository/test_production_queue_repository.py` (신규): enqueue 순서 보존 검증
+- `tests/controllers/test_approval_controller.py` (신규): `FakeApprovalView` + 실제 Repository(`tmp_path`) 사용, mock 없음
+
+### 프로덕션 코드 계획
+- `repository/sample_repository.py`: `decrease_stock(sample_id, amount)` 추가
+- `repository/order_repository.py`: `update_status(order_id, new_status)` 추가
+- `models/production_queue_entry.py`, `repository/production_queue_repository.py` (신규): `enqueue`/`get_all`, JSON 영속성 (기존 패턴 재사용)
+- `controllers/approval_controller.py` (신규): `list_pending_orders`/`approve`/`reject`
+- `views/approval_view.py` (신규, 테스트 없음): 승인 대기 목록 표시, 승인/거절 선택 입력
+- `controllers/main_controller.py`, `main.py`, `views/main_view.py`: "주문 승인/거절" 메뉴 연결
+
+### 이번 슬라이스 범위 밖
+- 생산 큐 실제 소비(FIFO 처리), 실 생산량/총 생산 시간 계산, PRODUCING→CONFIRMED 자동 전환 (슬라이스 5)
+- 모니터링, 출고 처리 (슬라이스 6~7)

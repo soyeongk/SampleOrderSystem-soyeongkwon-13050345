@@ -74,3 +74,12 @@ def test_search_by_name_returns_empty_list_when_no_match(tmp_path):
     repo.create(make_sample(sample_id="S-001", name="Silicon Wafer"))
 
     assert repo.search_by_name("nonexistent") == []
+
+
+def test_decrease_stock_reduces_and_persists(tmp_path):
+    repo = SampleRepository(tmp_path / "samples.json")
+    repo.create(make_sample(sample_id="S-001", stock_quantity=100))
+
+    repo.decrease_stock("S-001", 30)
+
+    assert repo.get_by_id("S-001").stock_quantity == 70

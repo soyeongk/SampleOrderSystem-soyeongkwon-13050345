@@ -55,3 +55,14 @@ def test_generate_order_id_has_no_collision_with_existing(tmp_path):
     second_id = repo.generate_order_id(fixed_time)
 
     assert second_id == "ORD-20260715-1000-02"
+
+
+def test_update_status_changes_and_persists(tmp_path):
+    repo = OrderRepository(tmp_path / "orders.json")
+    repo.create(make_order(order_id="ORD-20260715-1000-01"))
+
+    repo.update_status("ORD-20260715-1000-01", "CONFIRMED")
+
+    reloaded = OrderRepository(tmp_path / "orders.json")
+    orders = reloaded.get_all()
+    assert orders[0].status == "CONFIRMED"
