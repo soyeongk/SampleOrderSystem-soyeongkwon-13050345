@@ -13,12 +13,16 @@ class FakeApprovalView:
         self._decision = decision
         self.errors = []
         self.results = []
+        self.shown_summaries = []
 
     def show_pending_page(self, page):
         self.shown_pages.append(page)
 
     def read_page_command(self):
         return self._page_commands.pop(0)
+
+    def show_approval_summary(self, summary):
+        self.shown_summaries.append(summary)
 
     def read_decision(self):
         return self._decision
@@ -115,6 +119,48 @@ def test_reject_sets_rejected_status_without_touching_stock(tmp_path):
     assert order_repo.get_all()[0].status == "REJECTED"
     assert sample_repo.get_by_id("S-001").stock_quantity == 100
     assert queue_repo.get_all() == []
+
+
+def test_build_approval_summary_when_stock_sufficient(tmp_path):
+    controller, order_repo, _, _, _ = make_controller(
+        tmp_path, sample_stock=100, order_quantity=30
+    )
+    order = order_repo.get_all()[0]
+
+    summary = controller.build_approval_summary(order)
+
+    assert summary.sample_name == "Wafer-A"
+    assert summary.current_stock == 100
+    assert summary.order_quantity == 30
+    assert summary.shortfall == 0
+    assert summary.is_insufficient is False
+    assert summary.actual_quantity is None
+    assert summary.total_production_minutes is None
+
+
+def test_build_approval_summary_when_stock_insufficient(tmp_path):
+    controller, order_repo, _, _, _ = make_controller(
+        tmp_path, sample_stock=5, order_quantity=20
+    )
+    order = order_repo.get_all()[0]
+
+    summary = controller.build_approval_summary(order)
+
+    assert summary.shortfall == 15
+    assert summary.is_insufficient is True
+    assert summary.actual_quantity == 17  # ceil(15 / 0.9)
+    assert summary.total_production_minutes == 30.0 * 17
+
+
+def test_handle_menu_shows_summary_before_decision(tmp_path):
+    controller, order_repo, _, _, view = make_controller(
+        tmp_path, page_commands=["1"], decision="1"
+    )
+
+    controller.handle_menu()
+
+    assert len(view.shown_summaries) == 1
+    assert view.shown_summaries[0].sample_name == "Wafer-A"
 
 
 def test_handle_menu_approves_selected_order_when_decision_is_1(tmp_path):

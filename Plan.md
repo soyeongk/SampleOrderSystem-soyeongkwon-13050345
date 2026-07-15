@@ -600,3 +600,42 @@ DummyDataGenerator PoC의 더미 시료 생성 로직을 참고해 새로 작성
 
 ### 이번 슬라이스 범위 밖
 - 없음
+
+**상태: GREEN 완료, REVIEW 승인 완료 (커밋 `d012610`)**
+
+---
+
+## 슬라이스 16: 주문 승인/거절에도 확인 단계(재고/부족분/실생산량 미리보기) 추가
+
+주문을 선택한 뒤, 승인/거절 결정을 묻기 전에 아래 요약을 보여준다.
+
+```
+시료: 시료 이름
+현재 재고: 수량 ea
+주문 수량: 수량 ea
+부족분: 수량 ea   (재고가 부족한 경우 "재고 부족" 표시 + 실 생산량/생산시간 추가 표시)
+```
+
+### 검증할 동작 (Behavior)
+
+1. `ApprovalController.build_approval_summary(order)` (신규, 순수 계산 로직)
+   - 재고가 주문 수량 이상이면: `shortfall=0`, `is_insufficient=False`, 실생산량/생산시간은 `None`.
+   - 재고가 부족하면: `shortfall = 주문수량 - 현재재고`, `is_insufficient=True`,
+     `actual_quantity = ceil(shortfall / 수율)`, `total_production_minutes = 평균생산시간 * actual_quantity`.
+   - 이 계산은 미리보기용이며, 슬라이스 5의 실제 생산 시작 시점 계산(그때의 재고 기준)과 값이
+     다를 수 있음을 인지한다 (승인 시점 재고 기준의 추정치).
+2. `ApprovalController.handle_menu()`
+   - 주문 선택 후, 승인/거절 결정을 묻기 전에 `build_approval_summary()` 결과를 View에 표시한다.
+   - 승인 시 상태 변경 결과(새 상태)와 주문번호를 표시하는 기존 동작은 그대로 유지한다.
+
+### 작성할 테스트
+- `tests/controllers/test_approval_controller.py`에 추가
+  - `build_approval_summary`: 재고 충분/부족 각각의 계산 결과 검증
+  - `handle_menu`: 결정을 묻기 전에 요약이 표시되는지 확인 (재고 충분/부족 케이스 각각)
+
+### 프로덕션 코드 계획
+- `controllers/approval_controller.py`: `build_approval_summary()` 추가, `handle_menu()`에서 결정 전 호출
+- `views/approval_view.py`: `show_approval_summary(summary)` 추가 (테스트 없음)
+
+### 이번 슬라이스 범위 밖
+- 없음
