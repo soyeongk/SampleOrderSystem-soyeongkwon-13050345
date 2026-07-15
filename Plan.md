@@ -457,3 +457,36 @@
 
 ### 이번 슬라이스 범위 밖
 - 없음
+
+**상태: GREEN 완료, REVIEW 승인 완료 (커밋 `3b5a0f0`)**
+
+---
+
+## 슬라이스 12: [Test용] Dummy data 생성(시료) 메뉴
+
+DummyDataGenerator PoC의 더미 시료 생성 로직을 참고해 새로 작성한다. 메뉴는 "7. 출고 처리"
+다음(새 "8")에 추가하고, 기존 "8. [Test용] 생산 시간 강제 경과"는 "9"로, "9. 종료"는 "10"으로
+밀린다.
+
+### 검증할 동작 (Behavior)
+
+1. `DummySampleGeneratorController.generate_samples(count)`
+   - 요청한 개수만큼 시료를 생성해 저장소에 저장하고 반환한다.
+   - 시료 ID는 기존 최대 번호 다음부터 이어서 채번된다 (`SampleRepository.generate_sample_id()` 재사용).
+   - 수율은 0~1 사이, 재고는 0 이상, 평균 생산시간은 0보다 큰 값으로 생성된다 (정확한 난수 값이 아니라
+     이 범위 불변식을 검증 — 무작위 값이라 mock 없이 실제 코드로 범위만 확인).
+2. `DummySampleGeneratorController.handle_menu()`
+   - 입력값이 숫자가 아니면 에러를 표시하고 아무것도 생성하지 않는다.
+   - 입력값이 0 이하이면 에러를 표시하고 아무것도 생성하지 않는다.
+   - 유효하면 `generate_samples()`를 호출하고 결과를 View에 표시한다.
+
+### 작성할 테스트
+- `tests/controllers/test_dummy_sample_generator_controller.py` (신규): 실제 `SampleRepository`(`tmp_path`) 사용, mock 없음
+
+### 프로덕션 코드 계획
+- `controllers/dummy_sample_generator_controller.py` (신규): `generate_samples`, `handle_menu`
+- `views/dummy_data_view.py` (신규, 테스트 없음): 개수 입력, 생성 결과/에러 표시
+- `controllers/main_controller.py`, `main.py`, `views/main_view.py`: "[Test용] Dummy data 생성(시료)" 메뉴를 출고 처리 다음에 추가, 이후 메뉴 번호 재조정
+
+### 이번 슬라이스 범위 밖
+- 주문(Order) 더미 데이터 생성 (요청 범위는 시료로 한정)
