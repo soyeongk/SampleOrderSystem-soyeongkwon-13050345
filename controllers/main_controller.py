@@ -44,6 +44,7 @@ class MainController:
             "5": "생산 라인 조회",
             "6": "모니터링",
             "7": "출고 처리",
+            "8": "[Test용] 생산 시간 강제 경과",
         }
 
     def run(self) -> None:
@@ -81,6 +82,9 @@ class MainController:
             elif choice == "7":
                 self.shipment_controller.handle_menu()
             elif choice == "8":
+                self.production_line_controller.force_complete_current(datetime.now())
+                self.production_view.show_force_complete_result()
+            elif choice == "9":
                 self.main_view.show_goodbye()
                 is_running = False
             else:

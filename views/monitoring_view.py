@@ -16,3 +16,8 @@ class MonitoringView:
                 f"{row.sample_id} | {row.name} | 재고 {row.stock_quantity} | "
                 f"대기수요 {row.pending_demand} | 상태 {row.status}"
             )
+        print()
+        print(
+            "* 재고는 승인(CONFIRMED) 시점에 이미 차감된 수량입니다. "
+            "출고 처리 전이라도 승인된 주문만큼은 재고에서 미리 빠져 있습니다."
+        )

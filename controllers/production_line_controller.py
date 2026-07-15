@@ -1,5 +1,5 @@
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from repository.order_repository import OrderRepository
 from repository.production_queue_repository import ProductionQueueRepository
@@ -63,3 +63,17 @@ class ProductionLineController:
     def get_waiting_queue(self) -> list:
         entries = self.production_queue_repository.get_all()
         return entries[1:]
+
+    def force_complete_current(self, now: datetime) -> None:
+        self.advance(now)
+        entries = self.production_queue_repository.get_all()
+        if not entries:
+            return
+
+        head = entries[0]
+        if head.started_at is None:
+            return
+
+        started_at = datetime.fromisoformat(head.started_at)
+        completion_time = started_at + timedelta(minutes=head.total_production_minutes)
+        self.advance(completion_time)

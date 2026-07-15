@@ -20,3 +20,7 @@ class ProductionView:
             return
         for order_no, entry in enumerate(waiting_entries, start=1):
             print(f"{order_no}. 주문번호 {entry.order_id} | 시료 {entry.sample_id} | 수량 {entry.quantity}")
+
+    def show_force_complete_result(self) -> None:
+        print()
+        print("[Test용] 생산 시간을 강제로 경과시켰습니다.")

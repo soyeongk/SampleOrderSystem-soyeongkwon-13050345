@@ -18,7 +18,8 @@ class MainView:
         print("5. 생산 라인 조회")
         print("6. 모니터링")
         print("7. 출고 처리")
-        print("8. 종료")
+        print("8. [Test용] 생산 시간 강제 경과")
+        print("9. 종료")
 
     def read_menu_choice(self) -> str:
         return input("메뉴를 선택하세요: ").strip()
