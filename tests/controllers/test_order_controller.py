@@ -99,6 +99,20 @@ def test_reserve_order_navigates_to_next_page_before_selecting(tmp_path):
     assert len(view.shown_pages) == 2
 
 
+def test_reserve_order_returns_to_previous_page_immediately_after_overshooting_last_page(
+    tmp_path,
+):
+    controller, order_repo, view = make_controller(
+        tmp_path,
+        sample_count=12,
+        page_commands=["n", "n", "n", "p", "b"],
+    )
+
+    controller.reserve_order()
+
+    assert view.shown_pages[-1].page_number == 1
+
+
 def test_reserve_order_does_not_check_or_decrease_stock(tmp_path):
     controller, order_repo, view = make_controller(
         tmp_path,

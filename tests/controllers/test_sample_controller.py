@@ -220,6 +220,30 @@ def test_browse_samples_navigates_to_next_page(tmp_path):
     assert len(view.shown_pages[1].items) == 2
 
 
+def test_browse_samples_returns_to_previous_page_immediately_after_overshooting_last_page(
+    tmp_path,
+):
+    controller, repo, view = make_controller(
+        tmp_path / "samples.json",
+        lookup_choice="1",
+        browse_commands=["n", "n", "n", "p", "b"],
+    )
+    for i in range(1, 13):
+        repo.create(
+            Sample(
+                sample_id=f"S-{i:03d}",
+                name=f"Wafer-{i}",
+                average_production_minutes=30.0,
+                yield_rate=0.9,
+                stock_quantity=100,
+            )
+        )
+
+    controller.browse_samples()
+
+    assert view.shown_pages[-1].page_number == 1
+
+
 def test_browse_samples_shows_empty_page_when_no_samples(tmp_path):
     controller, repo, view = make_controller(
         tmp_path / "samples.json", lookup_choice="1", browse_commands=["b"]

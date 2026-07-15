@@ -130,3 +130,25 @@ def test_handle_menu_navigates_to_next_page_before_selecting(tmp_path):
     assert len(view.shown_pages) == 2
     statuses = {o.order_id: o.status for o in order_repo.get_all()}
     assert statuses["ORD-11"] == "RELEASED"
+
+
+def test_handle_menu_returns_to_previous_page_immediately_after_overshooting_last_page(
+    tmp_path,
+):
+    controller, order_repo, view = make_controller(
+        tmp_path, order_status="CONFIRMED", page_commands=["n", "n", "n", "p", "b"]
+    )
+    for i in range(2, 13):
+        order_repo.create(
+            Order(
+                order_id=f"ORD-{i}",
+                sample_id="S-001",
+                customer_name="Other Corp",
+                quantity=1,
+                status="CONFIRMED",
+            )
+        )
+
+    controller.handle_menu()
+
+    assert view.shown_pages[-1].page_number == 1

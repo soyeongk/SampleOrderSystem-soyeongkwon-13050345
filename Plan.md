@@ -671,3 +671,37 @@ DummyDataGenerator PoC의 더미 시료 생성 로직을 참고해 새로 작성
 
 ### 이번 슬라이스 범위 밖
 - 없음
+
+**상태: GREEN 완료 (커밋 `19ac2dd`)**
+
+---
+
+## 슬라이스 18: 버그 수정 — 페이지 탐색 시 마지막 페이지 초과 후 이전 페이지 이동 안 됨
+
+`n`/`p` 탐색 루프에서 `page_number`를 매 반복 증가/감소만 시키고, `paginate()`가 반환한
+clamp된 실제 페이지 번호로 동기화하지 않아서 생기는 버그. 예: 마지막 페이지(2페이지 중 2)에서
+`n`을 여러 번 누르면 내부 `page_number`는 3, 4, 5...로 계속 커지고(화면은 clamp돼서 그대로
+2페이지 표시), 그 다음 `p`를 한 번 눌러도 내부값이 여전히 총 페이지 수보다 커서 화면이 그대로
+2페이지에 머문다. `p`를 누적된 횟수만큼 여러 번 눌러야 그제서야 페이지가 실제로 줄어든다.
+
+네 화면(시료 조회, 시료 주문, 주문 승인/거절, 출고 처리) 모두 동일한 페이지 탐색 루프
+패턴이라 전부 영향을 받는다.
+
+### 수정 방향
+매 반복에서 `page = paginate(items, page_number)`를 계산한 직후, `page_number = page.page_number`로
+동기화한다 (clamp된 실제 페이지 번호를 다음 반복의 기준으로 사용). 이렇게 하면 마지막/처음
+페이지에서 `n`/`p`를 아무리 눌러도 실제 표시된 페이지를 기준으로만 한 칸씩 이동한다.
+
+### 검증할 동작 (Behavior)
+- 마지막 페이지에서 `n`을 여러 번 눌러도 계속 마지막 페이지에 머문다.
+- 그 상태에서 `p`를 한 번만 눌러도 바로 이전 페이지로 이동한다 (내부에 누적된 초과분 때문에 여러 번 눌러야 하는 문제가 없어야 함).
+- 첫 페이지에서 `p`를 여러 번 눌러도 계속 첫 페이지에 머물고, 그 다음 `n` 한 번으로 바로 다음 페이지로 이동한다.
+
+### 작성할 테스트
+- `tests/controllers/test_sample_controller.py`, `test_order_controller.py`, `test_approval_controller.py`, `test_shipment_controller.py` 각각에 위 시나리오 테스트 추가
+
+### 프로덕션 코드 계획
+- `controllers/sample_controller.py`, `controllers/order_controller.py`, `controllers/approval_controller.py`, `controllers/shipment_controller.py`: 페이지 탐색 루프에서 `paginate()` 호출 직후 `page_number = page.page_number`로 동기화
+
+### 이번 슬라이스 범위 밖
+- 없음
