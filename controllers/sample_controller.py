@@ -57,6 +57,7 @@ class SampleController:
         page_number = 1
         while True:
             page = paginate(samples, page_number)
+            page_number = page.page_number
             self.sample_view.show_sample_page(page)
             command = self.sample_view.read_sample_browse_command()
 

@@ -24,6 +24,7 @@ class ShipmentController:
         page_number = 1
         while selected_order is None:
             page = paginate(shippable_orders, page_number)
+            page_number = page.page_number
             self.shipment_view.show_shippable_page(page)
             command = self.shipment_view.read_page_command()
 

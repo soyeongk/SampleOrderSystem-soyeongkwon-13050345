@@ -25,6 +25,7 @@ class OrderController:
         page_number = 1
         while selected_sample is None:
             page = paginate(samples, page_number)
+            page_number = page.page_number
             self.order_view.show_sample_page(page)
             command = self.order_view.read_sample_page_command()
 

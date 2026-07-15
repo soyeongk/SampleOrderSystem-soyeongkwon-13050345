@@ -87,6 +87,7 @@ class ApprovalController:
         page_number = 1
         while selected_order is None:
             page = paginate(pending_orders, page_number)
+            page_number = page.page_number
             self.approval_view.show_pending_page(page)
             command = self.approval_view.read_page_command()
 
