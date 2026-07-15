@@ -37,6 +37,15 @@ def test_create_rejects_duplicate_sample_id(tmp_path):
         repo.create(make_sample(sample_id="S-001"))
 
 
+def test_create_rejects_duplicate_sample_name(tmp_path):
+    file_path = tmp_path / "samples.json"
+    repo = SampleRepository(file_path)
+    repo.create(make_sample(sample_id="S-001", name="Wafer-A"))
+
+    with pytest.raises(ValueError):
+        repo.create(make_sample(sample_id="S-002", name="Wafer-A"))
+
+
 def test_get_by_id_returns_none_when_not_found(tmp_path):
     file_path = tmp_path / "samples.json"
     repo = SampleRepository(file_path)

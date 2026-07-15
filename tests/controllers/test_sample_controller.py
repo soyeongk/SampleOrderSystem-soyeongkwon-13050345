@@ -119,6 +119,32 @@ def test_register_sample_rejects_yield_rate_out_of_range(tmp_path):
     assert len(view.registration_errors) == 1
 
 
+def test_register_sample_rejects_duplicate_name(tmp_path):
+    controller, repo, view = make_controller(
+        tmp_path / "samples.json",
+        new_sample_input={
+            "name": "Wafer-A",
+            "average_production_minutes": "30",
+            "yield_rate": "0.9",
+            "stock_quantity": "100",
+        },
+    )
+    repo.create(
+        Sample(
+            sample_id="S-999",
+            name="Wafer-A",
+            average_production_minutes=10.0,
+            yield_rate=0.5,
+            stock_quantity=1,
+        )
+    )
+
+    controller.register_sample()
+
+    assert len(repo.get_all()) == 1
+    assert len(view.registration_errors) == 1
+
+
 def test_browse_samples_shows_full_list_page_then_exits_on_back(tmp_path):
     controller, repo, view = make_controller(
         tmp_path / "samples.json", lookup_choice="1", browse_commands=["b"]

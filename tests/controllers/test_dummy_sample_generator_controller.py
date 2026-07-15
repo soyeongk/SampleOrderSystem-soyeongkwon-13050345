@@ -55,6 +55,15 @@ def test_generate_samples_values_within_expected_ranges(tmp_path):
         assert sample.average_production_minutes > 0
 
 
+def test_generate_samples_produces_unique_names_even_when_count_exceeds_name_pool(tmp_path):
+    controller, repo, _ = make_controller(tmp_path)
+
+    created = controller.generate_samples(15)
+
+    names = [s.name for s in created]
+    assert len(set(names)) == len(names)
+
+
 def test_handle_menu_creates_samples_and_shows_result(tmp_path):
     controller, repo, view = make_controller(tmp_path, count="4")
 

@@ -490,3 +490,33 @@ DummyDataGenerator PoC의 더미 시료 생성 로직을 참고해 새로 작성
 
 ### 이번 슬라이스 범위 밖
 - 주문(Order) 더미 데이터 생성 (요청 범위는 시료로 한정)
+
+**상태: GREEN 완료, REVIEW 승인 완료 (커밋 `953d744`)**
+
+---
+
+## 슬라이스 13: 버그 수정 — 시료 이름 중복 금지
+
+시료 이름이 중복되면 안 된다는 요구사항 누락을 수정한다. 등록(`register_sample`)과
+더미 데이터 생성(`DummySampleGeneratorController`) 양쪽 다 영향을 받는다 — 더미 생성은
+후보 이름이 10개뿐이라 개수가 10개를 넘으면 반드시 충돌하므로, 이름 후보가 소진되면
+접미사를 붙여 유일성을 보장한다.
+
+### 검증할 동작 (Behavior)
+
+1. `SampleRepository.create()`: 이미 존재하는 이름으로 생성 시도 시 `ValueError`를 발생시킨다 (기존 ID 중복 검사와 동일한 방식).
+2. `SampleController.register_sample()`: 이름이 중복되면 저장하지 않고 View에 에러를 표시한다.
+3. `DummySampleGeneratorController.generate_samples(count)`: 이름 후보(10개)를 초과하는 개수를 요청해도 모든 시료의 이름이 서로 다르다 (충돌 시 접미사를 붙여 유일성 보장).
+
+### 작성할 테스트
+- `tests/repository/test_sample_repository.py`: `test_create_rejects_duplicate_sample_name` 추가
+- `tests/controllers/test_sample_controller.py`: `test_register_sample_rejects_duplicate_name` 추가
+- `tests/controllers/test_dummy_sample_generator_controller.py`: `test_generate_samples_produces_unique_names_even_when_count_exceeds_name_pool` 추가 (count=15로 이름 후보 10개보다 많이 요청)
+
+### 프로덕션 코드 계획
+- `repository/sample_repository.py`: `create()`에 이름 중복 검사 추가
+- `controllers/sample_controller.py`: `register_sample()`에서 `create()`의 `ValueError`를 잡아 에러 표시로 변환
+- `controllers/dummy_sample_generator_controller.py`: 이름 선택 로직을 기존/이번 배치에서 이미 쓴 이름과 겹치지 않도록 재작성 (겹치면 `"{이름} #2"` 형태로 접미사)
+
+### 이번 슬라이스 범위 밖
+- 없음
