@@ -244,3 +244,41 @@
 
 ### 이번 슬라이스 범위 밖
 - 모니터링, 출고 처리 (슬라이스 6~7)
+
+**상태: GREEN 완료, REVIEW 승인 완료 (커밋 `3064cc6`)**
+
+---
+
+## 슬라이스 6: 모니터링
+
+### 설계 결정
+`DataMonitor` PoC의 판정 로직(대기수요 = RESERVED+PRODUCING 주문 수량 합, 여유/부족/고갈 기준)을 참고하되, 실제 로직이 있으므로 이 저장소의 도메인 모델(Sample/Order dataclass)에 맞춰 TDD로 새로 작성한다.
+
+- **재고 상태 판정 기준**: 재고 ≤ 0 → 고갈, 재고 < 대기수요 → 부족, 그 외 → 여유
+- **대기수요** = 해당 시료를 참조하는 주문 중 상태가 `RESERVED` 또는 `PRODUCING`인 것들의 수량 합 (CONFIRMED/RELEASED는 이미 재고에서 처리 완료되었거나 출고된 것으로 간주해 제외, REJECTED는 애초에 유효한 주문이 아니므로 제외)
+
+### 검증할 동작 (Behavior)
+
+1. `MonitoringController.get_order_status_counts()`
+   - `RESERVED`/`CONFIRMED`/`PRODUCING`/`RELEASED` 각각의 주문 건수를 반환한다.
+   - `REJECTED` 주문은 집계에서 제외한다.
+2. `MonitoringController.get_inventory_status()`
+   - 시료별로 `sample_id`, `name`, `stock_quantity`, `pending_demand`, `status`(여유/부족/고갈)를 반환한다.
+   - 대기수요는 `RESERVED`+`PRODUCING` 주문 수량 합으로 계산한다 (`CONFIRMED`/`RELEASED`/`REJECTED` 제외).
+   - 재고 0 → 고갈, 재고 > 0이고 대기수요보다 적음 → 부족, 그 외 → 여유.
+
+### 작성할 테스트
+- `tests/controllers/test_monitoring_controller.py` (신규): 실제 Repository(`tmp_path`) 사용, mock 없음
+  - 상태별 집계에서 REJECTED 제외 확인
+  - 재고 0 → 고갈
+  - 재고 > 0, 대기수요 초과 → 부족
+  - 재고 > 0, 대기수요 이하 → 여유
+  - 대기수요 계산 시 CONFIRMED/RELEASED/REJECTED 주문은 반영되지 않는지 확인
+
+### 프로덕션 코드 계획
+- `controllers/monitoring_controller.py` (신규): `get_order_status_counts`, `get_inventory_status`
+- `views/monitoring_view.py` (신규, 테스트 없음): 상태별 주문 수, 시료별 재고 현황 출력
+- `controllers/main_controller.py`, `main.py`, `views/main_view.py`: "모니터링" 메뉴 연결
+
+### 이번 슬라이스 범위 밖
+- 출고 처리 (슬라이스 7)
