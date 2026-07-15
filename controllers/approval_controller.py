@@ -1,9 +1,23 @@
+import math
+from dataclasses import dataclass
+
 from controllers.pagination import paginate, resolve_page_selection
 from models.order import Order
 from models.production_queue_entry import ProductionQueueEntry
 from repository.order_repository import OrderRepository
 from repository.production_queue_repository import ProductionQueueRepository
 from repository.sample_repository import SampleRepository
+
+
+@dataclass
+class ApprovalSummary:
+    sample_name: str
+    current_stock: int
+    order_quantity: int
+    shortfall: int
+    is_insufficient: bool
+    actual_quantity: int | None
+    total_production_minutes: float | None
 
 
 class ApprovalController:
@@ -42,6 +56,27 @@ class ApprovalController:
     def reject(self, order_id: str) -> None:
         self.order_repository.update_status(order_id, "REJECTED")
 
+    def build_approval_summary(self, order: Order) -> ApprovalSummary:
+        sample = self.sample_repository.get_by_id(order.sample_id)
+        is_insufficient = sample.stock_quantity < order.quantity
+        shortfall = max(0, order.quantity - sample.stock_quantity)
+
+        actual_quantity = None
+        total_production_minutes = None
+        if is_insufficient:
+            actual_quantity = math.ceil(shortfall / sample.yield_rate)
+            total_production_minutes = sample.average_production_minutes * actual_quantity
+
+        return ApprovalSummary(
+            sample_name=sample.name,
+            current_stock=sample.stock_quantity,
+            order_quantity=order.quantity,
+            shortfall=shortfall,
+            is_insufficient=is_insufficient,
+            actual_quantity=actual_quantity,
+            total_production_minutes=total_production_minutes,
+        )
+
     def handle_menu(self) -> None:
         pending_orders = self.list_pending_orders()
         if not pending_orders:
@@ -70,6 +105,7 @@ class ApprovalController:
                 return
 
         order_id = selected_order.order_id
+        self.approval_view.show_approval_summary(self.build_approval_summary(selected_order))
         decision = self.approval_view.read_decision()
         if decision == "1":
             self.approve(order_id)

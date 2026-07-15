@@ -25,6 +25,18 @@ class ApprovalView:
     def read_page_command(self) -> str:
         return input("선택: ").strip()
 
+    def show_approval_summary(self, summary) -> None:
+        print()
+        print("--- 승인 내용 확인 ---")
+        print(f"시료: {summary.sample_name}")
+        print(f"현재 재고: {summary.current_stock} ea")
+        print(f"주문 수량: {summary.order_quantity} ea")
+        print(f"부족분: {summary.shortfall} ea")
+        if summary.is_insufficient:
+            print("* 재고 부족")
+            print(f"실 생산량: {summary.actual_quantity} ea")
+            print(f"생산 시간: {summary.total_production_minutes}분")
+
     def read_decision(self) -> str:
         return input("[1] 승인  [2] 거절: ").strip()
 
