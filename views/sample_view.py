@@ -1,4 +1,5 @@
 from views.screen import clear_screen
+from views.table import compute_column_widths, render_row
 
 
 class SampleView:
@@ -43,12 +44,15 @@ class SampleView:
         if not page.items:
             print("등록된 시료가 없습니다.")
         else:
-            for i, sample in enumerate(page.items, start=1):
-                print(
-                    f"{i}. {sample.sample_id} | {sample.name} | "
-                    f"평균생산시간 {sample.average_production_minutes}분 | "
-                    f"수율 {sample.yield_rate} | 재고 {sample.stock_quantity}"
-                )
+            headers = ["번호", "시료ID", "이름", "평균생산시간", "수율", "재고"]
+            rows = [
+                [i, s.sample_id, s.name, s.average_production_minutes, s.yield_rate, s.stock_quantity]
+                for i, s in enumerate(page.items, start=1)
+            ]
+            widths = compute_column_widths(headers, rows)
+            print(render_row(headers, widths))
+            for row in rows:
+                print(render_row(row, widths))
         print()
         print(f"[페이지 {page.page_number}/{page.total_pages}] n: 다음, p: 이전, b: 이전 메뉴로")
 

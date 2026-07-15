@@ -1,4 +1,5 @@
 from views.screen import clear_screen
+from views.table import compute_column_widths, render_row
 
 
 class OrderView:
@@ -9,11 +10,15 @@ class OrderView:
         if not page.items:
             print("등록된 시료가 없습니다.")
         else:
-            for i, sample in enumerate(page.items, start=1):
-                print(
-                    f"{i}. {sample.name} ({sample.sample_id}) | "
-                    f"재고 {sample.stock_quantity} | 수율 {sample.yield_rate}"
-                )
+            headers = ["번호", "시료ID", "이름", "재고", "수율"]
+            rows = [
+                [i, s.sample_id, s.name, s.stock_quantity, s.yield_rate]
+                for i, s in enumerate(page.items, start=1)
+            ]
+            widths = compute_column_widths(headers, rows)
+            print(render_row(headers, widths))
+            for row in rows:
+                print(render_row(row, widths))
         print()
         print(f"[페이지 {page.page_number}/{page.total_pages}] n: 다음, p: 이전, b: 이전 메뉴로, 번호: 선택")
 
