@@ -83,3 +83,12 @@ def test_decrease_stock_reduces_and_persists(tmp_path):
     repo.decrease_stock("S-001", 30)
 
     assert repo.get_by_id("S-001").stock_quantity == 70
+
+
+def test_increase_stock_increases_and_persists(tmp_path):
+    repo = SampleRepository(tmp_path / "samples.json")
+    repo.create(make_sample(sample_id="S-001", stock_quantity=100))
+
+    repo.increase_stock("S-001", 50)
+
+    assert repo.get_by_id("S-001").stock_quantity == 150
