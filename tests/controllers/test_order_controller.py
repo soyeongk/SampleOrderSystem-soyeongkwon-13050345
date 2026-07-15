@@ -162,3 +162,16 @@ def test_reserve_order_shows_error_when_no_samples_registered(tmp_path):
 
     assert order_repo.get_all() == []
     assert len(view.order_errors) == 1
+
+
+def test_reserve_order_returns_to_menu_when_back_command_given(tmp_path):
+    controller, order_repo, view = make_controller(
+        tmp_path,
+        sample_count=1,
+        page_commands=["b"],
+    )
+
+    controller.reserve_order()
+
+    assert order_repo.get_all() == []
+    assert view.order_errors == []

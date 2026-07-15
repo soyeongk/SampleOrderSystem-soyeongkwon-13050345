@@ -161,6 +161,20 @@ def test_handle_menu_shows_error_for_invalid_decision(tmp_path):
     assert len(view.errors) == 1
 
 
+def test_handle_menu_returns_to_menu_when_back_command_given(tmp_path):
+    controller, order_repo, sample_repo, queue_repo, view = make_controller(
+        tmp_path, page_commands=["b"]
+    )
+
+    controller.handle_menu()
+
+    assert order_repo.get_all()[0].status == "RESERVED"
+    assert sample_repo.get_by_id("S-001").stock_quantity == 100
+    assert queue_repo.get_all() == []
+    assert view.errors == []
+    assert view.results == []
+
+
 def test_handle_menu_navigates_to_next_page_before_selecting(tmp_path):
     controller, order_repo, sample_repo, queue_repo, view = make_controller(
         tmp_path, page_commands=["n", "1"], decision="1"

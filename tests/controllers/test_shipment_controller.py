@@ -98,6 +98,18 @@ def test_handle_menu_does_nothing_when_no_shippable_orders(tmp_path):
     assert view.results == []
 
 
+def test_handle_menu_returns_to_menu_when_back_command_given(tmp_path):
+    controller, order_repo, view = make_controller(
+        tmp_path, order_status="CONFIRMED", page_commands=["b"]
+    )
+
+    controller.handle_menu()
+
+    assert order_repo.get_all()[0].status == "CONFIRMED"
+    assert view.errors == []
+    assert view.results == []
+
+
 def test_handle_menu_navigates_to_next_page_before_selecting(tmp_path):
     controller, order_repo, view = make_controller(
         tmp_path, order_status="CONFIRMED", page_commands=["n", "1"]

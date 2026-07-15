@@ -400,3 +400,28 @@
 
 ### 이번 슬라이스 범위 밖
 - 없음
+
+**상태: GREEN 완료, REVIEW 승인 완료 (커밋 `dd04f1c`)**
+
+---
+
+## 슬라이스 10: 페이지네이션 테이블에 "이전 메뉴로" 항목 추가
+
+시료 주문, 주문 승인/거절, 출고 처리 — 페이지네이션 테이블이 있는 세 화면 모두에
+아무것도 선택하지 않고 메인 메뉴로 돌아가는 `b` 명령을 추가한다.
+
+### 검증할 동작 (Behavior)
+
+1. `OrderController.reserve_order()`: 페이지 탐색 중 `b` 입력 시, 주문을 생성하지 않고 그대로 종료한다 (에러 표시 없음).
+2. `ApprovalController.handle_menu()`: 페이지 탐색 중 `b` 입력 시, 승인/거절 없이 그대로 종료한다.
+3. `ShipmentController.handle_menu()`: 페이지 탐색 중 `b` 입력 시, 출고 없이 그대로 종료한다.
+
+### 작성할 테스트
+- `tests/controllers/test_order_controller.py`, `test_approval_controller.py`, `test_shipment_controller.py`에 각각 `b` 명령 처리 테스트 추가 (실제 Repository, mock 없음)
+
+### 프로덕션 코드 계획
+- `controllers/order_controller.py`, `controllers/approval_controller.py`, `controllers/shipment_controller.py`: 페이지 탐색 루프에 `command == "b"` 분기 추가 (즉시 return)
+- `views/order_view.py`, `views/approval_view.py`, `views/shipment_view.py`: 페이지 안내 문구에 "b: 이전 메뉴로" 추가 (테스트 없음)
+
+### 이번 슬라이스 범위 밖
+- 없음
