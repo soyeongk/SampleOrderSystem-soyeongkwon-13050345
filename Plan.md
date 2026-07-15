@@ -282,3 +282,29 @@
 
 ### 이번 슬라이스 범위 밖
 - 출고 처리 (슬라이스 7)
+
+**상태: GREEN 완료, REVIEW 승인 완료 (커밋 `bb0c275`)**
+
+---
+
+## 슬라이스 7: 출고 처리 (마지막 슬라이스)
+
+### 검증할 동작 (Behavior)
+
+1. `ShipmentController.list_shippable_orders()`: `CONFIRMED` 상태 주문만 반환한다.
+2. `ShipmentController.ship(order_id)`: 주문 상태를 `RELEASED`로 전환한다.
+3. `ShipmentController.handle_menu()` (슬라이스 4의 `ApprovalController.handle_menu` 패턴과 동일)
+   - 출고 가능 목록을 View에 표시하고, 목록이 비어 있으면 그대로 종료한다.
+   - 사용자가 선택한 주문번호가 출고 가능 목록에 없으면 View에 에러를 표시한다.
+   - 있으면 `ship()`을 호출하고 결과를 View에 표시한다.
+
+### 작성할 테스트
+- `tests/controllers/test_shipment_controller.py` (신규): `FakeShipmentView` + 실제 `OrderRepository`(`tmp_path`) 사용, mock 없음
+
+### 프로덕션 코드 계획
+- `controllers/shipment_controller.py` (신규): `list_shippable_orders`, `ship`, `handle_menu`
+- `views/shipment_view.py` (신규, 테스트 없음): 출고 가능 목록 표시, 주문번호 입력, 결과/에러 표시
+- `controllers/main_controller.py`, `main.py`, `views/main_view.py`: "출고 처리" 메뉴 연결, 종료 메뉴 번호 재조정
+
+### 이번 슬라이스 범위 밖
+- 없음 — 기능 명세의 마지막 항목
