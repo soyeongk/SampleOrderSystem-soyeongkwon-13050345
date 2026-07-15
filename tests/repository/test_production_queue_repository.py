@@ -2,11 +2,11 @@ from models.production_queue_entry import ProductionQueueEntry
 from repository.production_queue_repository import ProductionQueueRepository
 
 
-def make_entry(order_id, sample_id="S-001", shortfall_quantity=10):
+def make_entry(order_id, sample_id="S-001", quantity=10):
     return ProductionQueueEntry(
         order_id=order_id,
         sample_id=sample_id,
-        shortfall_quantity=shortfall_quantity,
+        quantity=quantity,
     )
 
 

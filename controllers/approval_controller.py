@@ -29,13 +29,11 @@ class ApprovalController:
             self.sample_repository.decrease_stock(sample.sample_id, order.quantity)
             self.order_repository.update_status(order_id, "CONFIRMED")
         else:
-            shortfall_quantity = order.quantity - sample.stock_quantity
-            self.sample_repository.decrease_stock(sample.sample_id, sample.stock_quantity)
             self.production_queue_repository.enqueue(
                 ProductionQueueEntry(
                     order_id=order_id,
                     sample_id=sample.sample_id,
-                    shortfall_quantity=shortfall_quantity,
+                    quantity=order.quantity,
                 )
             )
             self.order_repository.update_status(order_id, "PRODUCING")
