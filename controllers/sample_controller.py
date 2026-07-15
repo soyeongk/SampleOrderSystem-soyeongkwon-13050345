@@ -35,7 +35,11 @@ class SampleController:
             yield_rate=yield_rate,
             stock_quantity=stock_quantity,
         )
-        self.sample_repository.create(sample)
+        try:
+            self.sample_repository.create(sample)
+        except ValueError as e:
+            self.sample_view.show_registration_error(str(e))
+            return
         self.sample_view.show_registration_success(sample)
 
     def browse_samples(self) -> None:

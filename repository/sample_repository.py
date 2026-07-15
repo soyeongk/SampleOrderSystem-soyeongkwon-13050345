@@ -19,6 +19,8 @@ class SampleRepository:
         samples = self.get_all()
         if any(s.sample_id == sample.sample_id for s in samples):
             raise ValueError(f"이미 존재하는 시료 ID입니다: {sample.sample_id}")
+        if any(s.name == sample.name for s in samples):
+            raise ValueError(f"이미 존재하는 시료 이름입니다: {sample.name}")
         samples.append(sample)
         save_json(self.file_path, [s.to_dict() for s in samples])
         return sample

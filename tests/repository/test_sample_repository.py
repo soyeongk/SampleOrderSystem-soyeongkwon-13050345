@@ -61,8 +61,8 @@ def test_generate_sample_id_returns_s001_when_empty(tmp_path):
 
 def test_generate_sample_id_returns_next_after_existing_max(tmp_path):
     repo = SampleRepository(tmp_path / "samples.json")
-    repo.create(make_sample(sample_id="S-001"))
-    repo.create(make_sample(sample_id="S-002"))
+    repo.create(make_sample(sample_id="S-001", name="Wafer-A"))
+    repo.create(make_sample(sample_id="S-002", name="Wafer-B"))
 
     assert repo.generate_sample_id() == "S-003"
 

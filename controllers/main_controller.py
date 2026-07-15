@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from controllers.approval_controller import ApprovalController
+from controllers.dummy_sample_generator_controller import DummySampleGeneratorController
 from controllers.monitoring_controller import MonitoringController
 from controllers.order_controller import OrderController
 from controllers.production_line_controller import ProductionLineController
@@ -10,6 +11,7 @@ from repository.order_repository import OrderRepository
 from repository.production_queue_repository import ProductionQueueRepository
 from repository.sample_repository import SampleRepository
 from views.approval_view import ApprovalView
+from views.dummy_data_view import DummyDataView
 from views.main_view import MainView
 from views.monitoring_view import MonitoringView
 from views.order_view import OrderView
@@ -36,6 +38,9 @@ class MainController:
         )
         self.monitoring_controller = MonitoringController(order_repository, sample_repository)
         self.shipment_controller = ShipmentController(order_repository, ShipmentView())
+        self.dummy_sample_generator_controller = DummySampleGeneratorController(
+            sample_repository, DummyDataView()
+        )
         self.menu_titles = {
             "1": "시료 등록",
             "2": "시료 조회",
@@ -44,7 +49,8 @@ class MainController:
             "5": "생산 라인 조회",
             "6": "모니터링",
             "7": "출고 처리",
-            "8": "[Test용] 생산 시간 강제 경과",
+            "8": "[Test용] Dummy data 생성(시료)",
+            "9": "[Test용] 생산 시간 강제 경과",
         }
 
     def run(self) -> None:
@@ -82,9 +88,11 @@ class MainController:
             elif choice == "7":
                 self.shipment_controller.handle_menu()
             elif choice == "8":
+                self.dummy_sample_generator_controller.handle_menu()
+            elif choice == "9":
                 self.production_line_controller.force_complete_current(datetime.now())
                 self.production_view.show_force_complete_result()
-            elif choice == "9":
+            elif choice == "10":
                 self.main_view.show_goodbye()
                 is_running = False
             else:
