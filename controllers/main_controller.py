@@ -85,3 +85,6 @@ class MainController:
                 is_running = False
             else:
                 self.main_view.show_unknown_choice()
+
+            if is_running:
+                self.main_view.wait_for_continue()

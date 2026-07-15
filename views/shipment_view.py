@@ -1,18 +1,22 @@
+from views.screen import clear_screen
+
+
 class ShipmentView:
-    def show_shippable_orders(self, orders) -> None:
-        print()
+    def show_shippable_page(self, page) -> None:
+        clear_screen()
         print("--- 출고 처리 (CONFIRMED) ---")
-        if not orders:
+        if not page.items:
             print("출고 가능한 주문이 없습니다.")
             return
-        for order in orders:
+        for i, order in enumerate(page.items, start=1):
             print(
-                f"{order.order_id} | 시료 {order.sample_id} | "
+                f"{i}. {order.order_id} | 시료 {order.sample_id} | "
                 f"고객 {order.customer_name} | 수량 {order.quantity}"
             )
+        print(f"[페이지 {page.page_number}/{page.total_pages}] n: 다음, p: 이전, 번호: 선택")
 
-    def read_target_order_id(self) -> str:
-        return input("출고할 주문번호: ").strip()
+    def read_page_command(self) -> str:
+        return input("선택: ").strip()
 
     def show_result(self, order_id: str, new_status: str) -> None:
         print(f"출고 처리 완료: {order_id} -> {new_status}")

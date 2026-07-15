@@ -23,6 +23,9 @@ class MainView:
     def read_menu_choice(self) -> str:
         return input("메뉴를 선택하세요: ").strip()
 
+    def wait_for_continue(self) -> None:
+        input("\n계속하려면 Enter를 누르세요...")
+
     def show_unknown_choice(self) -> None:
         print("올바른 메뉴 번호를 입력하세요.")
 

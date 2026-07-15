@@ -1,3 +1,4 @@
+from controllers.pagination import paginate, resolve_page_selection
 from models.order import Order
 from models.production_queue_entry import ProductionQueueEntry
 from repository.order_repository import OrderRepository
@@ -43,15 +44,30 @@ class ApprovalController:
 
     def handle_menu(self) -> None:
         pending_orders = self.list_pending_orders()
-        self.approval_view.show_pending_orders(pending_orders)
         if not pending_orders:
+            self.approval_view.show_pending_page(paginate([], 1))
             return
 
-        order_id = self.approval_view.read_target_order_id()
-        if order_id not in {o.order_id for o in pending_orders}:
-            self.approval_view.show_error("승인 대기 중인 주문번호가 아닙니다.")
-            return
+        selected_order = None
+        page_number = 1
+        while selected_order is None:
+            page = paginate(pending_orders, page_number)
+            self.approval_view.show_pending_page(page)
+            command = self.approval_view.read_page_command()
 
+            if command == "n":
+                page_number += 1
+                continue
+            if command == "p":
+                page_number -= 1
+                continue
+
+            selected_order = resolve_page_selection(page, command)
+            if selected_order is None:
+                self.approval_view.show_error("올바른 선택이 아닙니다.")
+                return
+
+        order_id = selected_order.order_id
         decision = self.approval_view.read_decision()
         if decision == "1":
             self.approve(order_id)
