@@ -4,7 +4,8 @@ class MainView:
         print("===== S-Semi 시료 생산주문관리 시스템 =====")
         print("1. 시료 등록")
         print("2. 시료 조회")
-        print("3. 종료")
+        print("3. 시료 주문(예약)")
+        print("4. 종료")
 
     def read_menu_choice(self) -> str:
         return input("메뉴를 선택하세요: ").strip()
