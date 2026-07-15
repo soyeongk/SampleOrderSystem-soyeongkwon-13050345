@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+.idea/
+.claude/settings.local.json
+
+# 개별 PoC는 별도 저장소로 관리됨
+ConsoleMVC/
+DataPersistence/
+DataMonitor/
+DummyDataGenerator/
+
+# 과제 원본/스크래치 파일
+*.pdf
+skill_create.txt
