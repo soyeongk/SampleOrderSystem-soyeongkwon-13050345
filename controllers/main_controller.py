@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from controllers.approval_controller import ApprovalController
+from controllers.monitoring_controller import MonitoringController
 from controllers.order_controller import OrderController
 from controllers.production_line_controller import ProductionLineController
 from controllers.sample_controller import SampleController
@@ -9,6 +10,7 @@ from repository.production_queue_repository import ProductionQueueRepository
 from repository.sample_repository import SampleRepository
 from views.approval_view import ApprovalView
 from views.main_view import MainView
+from views.monitoring_view import MonitoringView
 from views.order_view import OrderView
 from views.production_view import ProductionView
 from views.sample_view import SampleView
@@ -18,6 +20,7 @@ class MainController:
     def __init__(self, samples_file_path, orders_file_path, production_queue_file_path):
         self.main_view = MainView()
         self.production_view = ProductionView()
+        self.monitoring_view = MonitoringView()
         sample_repository = SampleRepository(samples_file_path)
         order_repository = OrderRepository(orders_file_path)
         production_queue_repository = ProductionQueueRepository(production_queue_file_path)
@@ -29,6 +32,7 @@ class MainController:
         self.production_line_controller = ProductionLineController(
             order_repository, sample_repository, production_queue_repository
         )
+        self.monitoring_controller = MonitoringController(order_repository, sample_repository)
 
     def run(self) -> None:
         is_running = True
@@ -53,6 +57,13 @@ class MainController:
                     self.production_line_controller.get_waiting_queue()
                 )
             elif choice == "6":
+                self.monitoring_view.show_order_status_counts(
+                    self.monitoring_controller.get_order_status_counts()
+                )
+                self.monitoring_view.show_inventory_status(
+                    self.monitoring_controller.get_inventory_status()
+                )
+            elif choice == "7":
                 self.main_view.show_goodbye()
                 is_running = False
             else:
