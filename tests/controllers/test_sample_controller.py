@@ -4,13 +4,16 @@ from repository.sample_repository import SampleRepository
 
 
 class FakeSampleView:
-    def __init__(self, new_sample_input=None, lookup_choice=None, search_keyword=None):
+    def __init__(
+        self, new_sample_input=None, lookup_choice=None, search_keyword=None, browse_commands=None
+    ):
         self._new_sample_input = new_sample_input
         self._lookup_choice = lookup_choice
         self._search_keyword = search_keyword
+        self._browse_commands = list(browse_commands or [])
         self.registration_successes = []
         self.registration_errors = []
-        self.displayed_sample_lists = []
+        self.shown_pages = []
 
     def show_registration_menu(self):
         pass
@@ -33,8 +36,11 @@ class FakeSampleView:
     def read_search_keyword(self):
         return self._search_keyword
 
-    def show_sample_list(self, samples):
-        self.displayed_sample_lists.append(samples)
+    def show_sample_page(self, page):
+        self.shown_pages.append(page)
+
+    def read_sample_browse_command(self):
+        return self._browse_commands.pop(0)
 
 
 def make_controller(repo_path, **view_kwargs):
@@ -113,8 +119,10 @@ def test_register_sample_rejects_yield_rate_out_of_range(tmp_path):
     assert len(view.registration_errors) == 1
 
 
-def test_browse_samples_shows_full_list_when_choice_is_1(tmp_path):
-    controller, repo, view = make_controller(tmp_path / "samples.json", lookup_choice="1")
+def test_browse_samples_shows_full_list_page_then_exits_on_back(tmp_path):
+    controller, repo, view = make_controller(
+        tmp_path / "samples.json", lookup_choice="1", browse_commands=["b"]
+    )
     repo.create(
         Sample(
             sample_id="S-001",
@@ -127,12 +135,16 @@ def test_browse_samples_shows_full_list_when_choice_is_1(tmp_path):
 
     controller.browse_samples()
 
-    assert len(view.displayed_sample_lists[0]) == 1
+    assert len(view.shown_pages[0].items) == 1
+    assert view.shown_pages[0].items[0].sample_id == "S-001"
 
 
-def test_browse_samples_shows_search_result_when_choice_is_2(tmp_path):
+def test_browse_samples_shows_search_result_page_then_exits_on_back(tmp_path):
     controller, repo, view = make_controller(
-        tmp_path / "samples.json", lookup_choice="2", search_keyword="Wafer"
+        tmp_path / "samples.json",
+        lookup_choice="2",
+        search_keyword="Wafer",
+        browse_commands=["b"],
     )
 
     repo.create(
@@ -156,5 +168,37 @@ def test_browse_samples_shows_search_result_when_choice_is_2(tmp_path):
 
     controller.browse_samples()
 
-    assert len(view.displayed_sample_lists[0]) == 1
-    assert view.displayed_sample_lists[0][0].sample_id == "S-001"
+    assert len(view.shown_pages[0].items) == 1
+    assert view.shown_pages[0].items[0].sample_id == "S-001"
+
+
+def test_browse_samples_navigates_to_next_page(tmp_path):
+    controller, repo, view = make_controller(
+        tmp_path / "samples.json", lookup_choice="1", browse_commands=["n", "b"]
+    )
+    for i in range(1, 13):
+        repo.create(
+            Sample(
+                sample_id=f"S-{i:03d}",
+                name=f"Wafer-{i}",
+                average_production_minutes=30.0,
+                yield_rate=0.9,
+                stock_quantity=100,
+            )
+        )
+
+    controller.browse_samples()
+
+    assert len(view.shown_pages) == 2
+    assert view.shown_pages[1].page_number == 2
+    assert len(view.shown_pages[1].items) == 2
+
+
+def test_browse_samples_shows_empty_page_when_no_samples(tmp_path):
+    controller, repo, view = make_controller(
+        tmp_path / "samples.json", lookup_choice="1", browse_commands=["b"]
+    )
+
+    controller.browse_samples()
+
+    assert view.shown_pages[0].items == []
