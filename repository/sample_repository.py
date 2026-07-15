@@ -22,3 +22,12 @@ class SampleRepository:
         samples.append(sample)
         save_json(self.file_path, [s.to_dict() for s in samples])
         return sample
+
+    def generate_sample_id(self) -> str:
+        existing_numbers = [int(s.sample_id.split("-")[1]) for s in self.get_all()]
+        next_number = max(existing_numbers, default=0) + 1
+        return f"S-{next_number:03d}"
+
+    def search_by_name(self, keyword: str) -> list[Sample]:
+        keyword_lower = keyword.lower()
+        return [s for s in self.get_all() if keyword_lower in s.name.lower()]

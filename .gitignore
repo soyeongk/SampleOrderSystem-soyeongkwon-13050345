@@ -3,6 +3,10 @@ __pycache__/
 .venv/
 .idea/
 .claude/settings.local.json
+.pytest_cache/
+
+# 런타임에 생성되는 데이터 파일 (앱 실행 시 자동 생성됨)
+data/*.json
 
 # 개별 PoC는 별도 저장소로 관리됨
 ConsoleMVC/
