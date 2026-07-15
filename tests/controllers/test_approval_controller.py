@@ -7,14 +7,32 @@ from repository.sample_repository import SampleRepository
 
 
 class FakeApprovalView:
-    def __init__(self):
+    def __init__(self, target_order_id=None, decision=None):
         self.shown_lists = []
+        self._target_order_id = target_order_id
+        self._decision = decision
+        self.errors = []
+        self.results = []
 
     def show_pending_orders(self, orders):
         self.shown_lists.append(orders)
 
+    def read_target_order_id(self):
+        return self._target_order_id
 
-def make_controller(tmp_path, sample_stock=100, order_quantity=30, order_status="RESERVED"):
+    def read_decision(self):
+        return self._decision
+
+    def show_error(self, message):
+        self.errors.append(message)
+
+    def show_result(self, order_id, new_status):
+        self.results.append((order_id, new_status))
+
+
+def make_controller(
+    tmp_path, sample_stock=100, order_quantity=30, order_status="RESERVED", **view_kwargs
+):
     sample_repo = SampleRepository(tmp_path / "samples.json")
     sample_repo.create(
         Sample(
@@ -36,7 +54,7 @@ def make_controller(tmp_path, sample_stock=100, order_quantity=30, order_status=
         )
     )
     queue_repo = ProductionQueueRepository(tmp_path / "production_queue.json")
-    view = FakeApprovalView()
+    view = FakeApprovalView(**view_kwargs)
     controller = ApprovalController(order_repo, sample_repo, queue_repo, view)
     return controller, order_repo, sample_repo, queue_repo, view
 
@@ -96,3 +114,47 @@ def test_reject_sets_rejected_status_without_touching_stock(tmp_path):
     assert order_repo.get_all()[0].status == "REJECTED"
     assert sample_repo.get_by_id("S-001").stock_quantity == 100
     assert queue_repo.get_all() == []
+
+
+def test_handle_menu_approves_when_decision_is_1(tmp_path):
+    controller, order_repo, _, _, view = make_controller(
+        tmp_path, target_order_id="ORD-1", decision="1"
+    )
+
+    controller.handle_menu()
+
+    assert order_repo.get_all()[0].status == "CONFIRMED"
+    assert view.results == [("ORD-1", "CONFIRMED")]
+
+
+def test_handle_menu_rejects_when_decision_is_2(tmp_path):
+    controller, order_repo, _, _, view = make_controller(
+        tmp_path, target_order_id="ORD-1", decision="2"
+    )
+
+    controller.handle_menu()
+
+    assert order_repo.get_all()[0].status == "REJECTED"
+    assert view.results == [("ORD-1", "REJECTED")]
+
+
+def test_handle_menu_shows_error_for_unknown_order_id(tmp_path):
+    controller, order_repo, _, _, view = make_controller(
+        tmp_path, target_order_id="ORD-999", decision="1"
+    )
+
+    controller.handle_menu()
+
+    assert order_repo.get_all()[0].status == "RESERVED"
+    assert len(view.errors) == 1
+
+
+def test_handle_menu_shows_error_for_invalid_decision(tmp_path):
+    controller, order_repo, _, _, view = make_controller(
+        tmp_path, target_order_id="ORD-1", decision="9"
+    )
+
+    controller.handle_menu()
+
+    assert order_repo.get_all()[0].status == "RESERVED"
+    assert len(view.errors) == 1
