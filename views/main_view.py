@@ -5,7 +5,8 @@ class MainView:
         print("1. 시료 등록")
         print("2. 시료 조회")
         print("3. 시료 주문(예약)")
-        print("4. 종료")
+        print("4. 주문 승인/거절")
+        print("5. 종료")
 
     def read_menu_choice(self) -> str:
         return input("메뉴를 선택하세요: ").strip()

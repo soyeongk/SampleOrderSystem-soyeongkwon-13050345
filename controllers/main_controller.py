@@ -1,19 +1,26 @@
+from controllers.approval_controller import ApprovalController
 from controllers.order_controller import OrderController
 from controllers.sample_controller import SampleController
 from repository.order_repository import OrderRepository
+from repository.production_queue_repository import ProductionQueueRepository
 from repository.sample_repository import SampleRepository
+from views.approval_view import ApprovalView
 from views.main_view import MainView
 from views.order_view import OrderView
 from views.sample_view import SampleView
 
 
 class MainController:
-    def __init__(self, samples_file_path, orders_file_path):
+    def __init__(self, samples_file_path, orders_file_path, production_queue_file_path):
         self.main_view = MainView()
         sample_repository = SampleRepository(samples_file_path)
         order_repository = OrderRepository(orders_file_path)
+        production_queue_repository = ProductionQueueRepository(production_queue_file_path)
         self.sample_controller = SampleController(sample_repository, SampleView())
         self.order_controller = OrderController(order_repository, sample_repository, OrderView())
+        self.approval_controller = ApprovalController(
+            order_repository, sample_repository, production_queue_repository, ApprovalView()
+        )
 
     def run(self) -> None:
         is_running = True
@@ -28,6 +35,8 @@ class MainController:
             elif choice == "3":
                 self.order_controller.reserve_order()
             elif choice == "4":
+                self.approval_controller.handle_menu()
+            elif choice == "5":
                 self.main_view.show_goodbye()
                 is_running = False
             else:

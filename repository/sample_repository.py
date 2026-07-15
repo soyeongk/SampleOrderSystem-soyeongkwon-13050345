@@ -31,3 +31,10 @@ class SampleRepository:
     def search_by_name(self, keyword: str) -> list[Sample]:
         keyword_lower = keyword.lower()
         return [s for s in self.get_all() if keyword_lower in s.name.lower()]
+
+    def decrease_stock(self, sample_id: str, amount: int) -> None:
+        samples = self.get_all()
+        for sample in samples:
+            if sample.sample_id == sample_id:
+                sample.stock_quantity -= amount
+        save_json(self.file_path, [s.to_dict() for s in samples])

@@ -19,6 +19,13 @@ class OrderRepository:
         save_json(self.file_path, [o.to_dict() for o in orders])
         return order
 
+    def update_status(self, order_id: str, new_status: str) -> None:
+        orders = self.get_all()
+        for order in orders:
+            if order.order_id == order_id:
+                order.status = new_status
+        save_json(self.file_path, [o.to_dict() for o in orders])
+
     def generate_order_id(self, base_time: datetime | None = None) -> str:
         base_time = base_time or datetime.now()
         prefix = f"ORD-{base_time.strftime('%Y%m%d-%H%M')}"
