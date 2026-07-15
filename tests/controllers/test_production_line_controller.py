@@ -145,3 +145,53 @@ def test_get_waiting_queue_excludes_head(tmp_path):
     waiting = controller.get_waiting_queue()
 
     assert [e.order_id for e in waiting] == ["ORD-2"]
+
+
+def test_force_complete_current_does_nothing_when_queue_empty(tmp_path):
+    controller, _, sample_repo, _ = make_env(tmp_path)
+
+    controller.force_complete_current(NOW)
+
+    assert sample_repo.get_by_id("S-001").stock_quantity == 5
+
+
+def test_force_complete_current_starts_and_completes_unstarted_entry(tmp_path):
+    controller, order_repo, sample_repo, queue_repo = make_env(tmp_path, stock_quantity=5)
+    add_order(order_repo, "ORD-1", quantity=10)
+    queue_repo.enqueue(ProductionQueueEntry(order_id="ORD-1", sample_id="S-001", quantity=10))
+
+    controller.force_complete_current(NOW)
+
+    assert queue_repo.get_all() == []
+    assert order_repo.get_all()[0].status == "CONFIRMED"
+    assert sample_repo.get_by_id("S-001").stock_quantity == 45
+
+
+def test_force_complete_current_completes_already_started_entry_regardless_of_elapsed_time(
+    tmp_path,
+):
+    controller, order_repo, sample_repo, queue_repo = make_env(tmp_path, stock_quantity=5)
+    add_order(order_repo, "ORD-1", quantity=10)
+    queue_repo.enqueue(ProductionQueueEntry(order_id="ORD-1", sample_id="S-001", quantity=10))
+    controller.advance(NOW)  # starts production (total_production_minutes = 50)
+
+    controller.force_complete_current(NOW + timedelta(minutes=1))  # far short of 50 minutes
+
+    assert queue_repo.get_all() == []
+    assert order_repo.get_all()[0].status == "CONFIRMED"
+    assert sample_repo.get_by_id("S-001").stock_quantity == 45
+
+
+def test_force_complete_current_cascades_to_resolve_next_entry(tmp_path):
+    controller, order_repo, sample_repo, queue_repo = make_env(tmp_path, stock_quantity=5)
+    add_order(order_repo, "ORD-1", quantity=10)
+    add_order(order_repo, "ORD-2", quantity=30)
+    queue_repo.enqueue(ProductionQueueEntry(order_id="ORD-1", sample_id="S-001", quantity=10))
+    queue_repo.enqueue(ProductionQueueEntry(order_id="ORD-2", sample_id="S-001", quantity=30))
+
+    controller.force_complete_current(NOW)
+
+    assert queue_repo.get_all() == []
+    statuses = {o.order_id: o.status for o in order_repo.get_all()}
+    assert statuses == {"ORD-1": "CONFIRMED", "ORD-2": "CONFIRMED"}
+    assert sample_repo.get_by_id("S-001").stock_quantity == 15

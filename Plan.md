@@ -365,3 +365,38 @@
 
 추가 수정: 각 메뉴 처리 후 결과 화면이 다음 루프의 `show_menu()` 호출로 즉시 지워지던 문제를
 발견해 `MainView.wait_for_continue()`(Enter 대기)를 추가함 (테스트 없음, 순수 화면 흐름 제어).
+
+---
+
+## 슬라이스 9: [Test용] 생산 시간 강제 경과 메뉴
+
+실제 생산 완료까지 기다리지 않고도 생산 라인 조회 기능을 확인할 수 있도록, 현재 생산 중인
+큐 항목을 즉시 완료 처리하는 테스트 전용 메뉴를 추가한다. 메뉴 이름에 "Test를 위해"가 명시되어
+운영 기능이 아님을 분명히 한다.
+
+### 검증할 동작 (Behavior)
+
+`ProductionLineController.force_complete_current(now)`
+
+- 큐가 비어 있으면 아무 것도 하지 않는다.
+- head 항목이 아직 시작 전이면, 먼저 `now` 시점에 시작시킨 뒤(기존 `advance` 로직 재사용),
+  그 항목의 `started_at + total_production_minutes` 시점까지 강제로 진행시켜 즉시 완료 처리한다.
+- head 항목이 이미 시작된 상태라면, `now`와 무관하게 `started_at + total_production_minutes`
+  시점까지 진행시켜 즉시 완료 처리한다 (실제 경과 시간을 기다리지 않음).
+- 완료 후 다음 큐 항목이 남아 있고, 그 시점 재고로 충분하면 슬라이스 5의 연쇄 처리 로직에 따라
+  추가 생산 없이 바로 확정된다 (기존 `advance`를 그대로 호출하므로 별도 구현 불필요).
+
+### 작성할 테스트
+- `tests/controllers/test_production_line_controller.py`에 추가
+  - 미시작 항목: 한 번 호출로 시작+완료까지 처리되는지
+  - 이미 시작된 항목: 경과 시간이 총 생산 시간에 못 미쳐도 즉시 완료되는지
+  - 큐가 비어 있으면 아무 일도 일어나지 않는지
+  - 완료 후 다음 항목이 잉여 재고로 바로 확정되는 연쇄 처리까지 확인
+
+### 프로덕션 코드 계획
+- `controllers/production_line_controller.py`: `force_complete_current(now)` 추가 (내부적으로 기존 `advance` 재사용)
+- `views/production_view.py`: 강제 완료 결과 표시 메서드 추가 (테스트 없음)
+- `controllers/main_controller.py`, `main.py`, `views/main_view.py`: "[Test용] 생산 시간 강제 경과" 메뉴 추가, 종료 메뉴 번호 재조정
+
+### 이번 슬라이스 범위 밖
+- 없음
