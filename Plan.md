@@ -520,3 +520,34 @@ DummyDataGenerator PoC의 더미 시료 생성 로직을 참고해 새로 작성
 
 ### 이번 슬라이스 범위 밖
 - 없음
+
+**상태: GREEN 완료, REVIEW 승인 완료 (커밋 `e24b4ab`)**
+
+---
+
+## 슬라이스 14: 버그 수정 — 한글 포함 테이블 정렬 깨짐
+
+테이블에 컬럼 헤더를 추가하면서(`:<width` 방식) 한글이 터미널에서 2칸 폭을 차지하는 걸
+고려하지 않아, 시료명처럼 길이가 들쭉날쭉한 한글 문자열이 있는 컬럼 다음부터 정렬이
+깨지는 버그가 발견됨. 표시 폭(문자 폭이 아니라 터미널에서 차지하는 칸 수)을 계산해서
+패딩하도록 수정한다.
+
+### 검증할 동작 (Behavior)
+
+`views/table.py`(신규)
+
+- `display_width(text)`: ASCII/숫자 등 폭 1인 문자는 1칸, 한글 등 동아시아 넓은 문자는 2칸으로 계산한다.
+- `pad(text, width)`: `display_width` 기준으로 목표 폭에 맞게 공백을 채운다 (문자 개수가 아니라 표시 폭 기준).
+
+### 작성할 테스트
+- `tests/views/test_table.py` (신규)
+  - ASCII 문자열의 표시 폭은 문자 수와 같다.
+  - 한글 문자열의 표시 폭은 문자 수의 2배다.
+  - `pad`는 표시 폭 기준으로 공백을 채워, 한글이 섞여도 전체 표시 폭이 목표 폭과 같아진다.
+
+### 프로덕션 코드 계획
+- `views/table.py` (신규): `display_width`, `pad`
+- `views/sample_view.py`, `views/order_view.py`, `views/approval_view.py`, `views/shipment_view.py`: 기존 `f"{value:<width}"` 정렬을 `pad(value, width)` 호출로 교체
+
+### 이번 슬라이스 범위 밖
+- 없음
