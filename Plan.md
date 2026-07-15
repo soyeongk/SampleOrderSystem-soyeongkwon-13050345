@@ -563,3 +563,40 @@ DummyDataGenerator PoC의 더미 시료 생성 로직을 참고해 새로 작성
   최소 여백 없이 원래 단순한 형태로 되돌림 (여백은 `render_row`가 명시적으로 담당).
 - 4개 View의 `show_*_page()`를 헤더/행을 리스트로 구성한 뒤 `compute_column_widths`+`render_row`로
   렌더링하도록 재작성.
+
+**상태: GREEN 완료 (커밋 `910e782`)**
+
+---
+
+## 슬라이스 15: 시료 주문에 입력 내용 확인(Y/N) 단계 추가
+
+시료 선택 → 고객명 → 수량 입력이 끝나면, 실제로 주문을 생성하기 전에 입력 내용을 요약해서
+보여주고 `Y`(예약 접수)/`N`(취소) 확인을 받는다.
+
+```
+시료: 시료 이름 (시료 ID)
+고객: 고객 이름
+수량: 수량 ea
+[Y] 예약 접수  [N] 취소
+```
+
+### 검증할 동작 (Behavior)
+
+`OrderController.reserve_order()`
+
+- 시료/고객명/수량 검증을 모두 통과하면, 주문을 생성하기 전에 View에 요약 정보를 보여주고 확인을 받는다.
+- 확인값이 `Y`/`y`(대소문자 무관)면 주문을 생성하고 성공 메시지를 표시한다.
+- 확인값이 그 외(`N`/`n` 등)면 주문을 생성하지 않고, 취소되었다는 메시지를 표시한다.
+
+### 작성할 테스트
+- `tests/controllers/test_order_controller.py`에 추가
+  - 확인값 `Y` → 주문 생성됨
+  - 확인값 `y`(소문자) → 주문 생성됨
+  - 확인값 `N`(또는 그 외) → 주문 생성되지 않고 취소 메시지 표시
+
+### 프로덕션 코드 계획
+- `controllers/order_controller.py`: 검증 통과 후 확인 단계 추가
+- `views/order_view.py`: `show_order_summary(sample, customer_name, quantity)`, `read_confirmation()`, `show_reservation_cancelled()` 추가 (테스트 없음)
+
+### 이번 슬라이스 범위 밖
+- 없음

@@ -5,13 +5,18 @@ from repository.sample_repository import SampleRepository
 
 
 class FakeOrderView:
-    def __init__(self, page_commands=None, customer_name=None, quantity=None):
+    def __init__(
+        self, page_commands=None, customer_name=None, quantity=None, confirmation=None
+    ):
         self._page_commands = list(page_commands or [])
         self._customer_name = customer_name
         self._quantity = quantity
+        self._confirmation = confirmation
         self.shown_pages = []
         self.order_successes = []
         self.order_errors = []
+        self.shown_summaries = []
+        self.cancelled_count = 0
 
     def show_sample_page(self, page):
         self.shown_pages.append(page)
@@ -24,6 +29,15 @@ class FakeOrderView:
 
     def read_quantity(self):
         return self._quantity
+
+    def show_order_summary(self, sample, customer_name, quantity):
+        self.shown_summaries.append((sample, customer_name, quantity))
+
+    def read_confirmation(self):
+        return self._confirmation
+
+    def show_reservation_cancelled(self):
+        self.cancelled_count += 1
 
     def show_order_success(self, order):
         self.order_successes.append(order)
@@ -56,6 +70,7 @@ def test_reserve_order_creates_order_for_selected_sample(tmp_path):
         page_commands=["1"],
         customer_name="ACME Corp",
         quantity="10",
+        confirmation="Y",
     )
 
     controller.reserve_order()
@@ -74,6 +89,7 @@ def test_reserve_order_navigates_to_next_page_before_selecting(tmp_path):
         page_commands=["n", "1"],
         customer_name="ACME Corp",
         quantity="10",
+        confirmation="Y",
     )
 
     controller.reserve_order()
@@ -90,11 +106,62 @@ def test_reserve_order_does_not_check_or_decrease_stock(tmp_path):
         page_commands=["1"],
         customer_name="ACME Corp",
         quantity="9999",
+        confirmation="Y",
     )
 
     controller.reserve_order()
 
     assert order_repo.get_all()[0].status == "RESERVED"
+
+
+def test_reserve_order_shows_summary_before_confirming(tmp_path):
+    controller, order_repo, view = make_controller(
+        tmp_path,
+        sample_count=1,
+        page_commands=["1"],
+        customer_name="ACME Corp",
+        quantity="10",
+        confirmation="Y",
+    )
+
+    controller.reserve_order()
+
+    sample, customer_name, quantity = view.shown_summaries[0]
+    assert sample.sample_id == "S-001"
+    assert customer_name == "ACME Corp"
+    assert quantity == 10
+
+
+def test_reserve_order_accepts_lowercase_y_confirmation(tmp_path):
+    controller, order_repo, view = make_controller(
+        tmp_path,
+        sample_count=1,
+        page_commands=["1"],
+        customer_name="ACME Corp",
+        quantity="10",
+        confirmation="y",
+    )
+
+    controller.reserve_order()
+
+    assert len(order_repo.get_all()) == 1
+
+
+def test_reserve_order_cancels_when_confirmation_is_not_y(tmp_path):
+    controller, order_repo, view = make_controller(
+        tmp_path,
+        sample_count=1,
+        page_commands=["1"],
+        customer_name="ACME Corp",
+        quantity="10",
+        confirmation="N",
+    )
+
+    controller.reserve_order()
+
+    assert order_repo.get_all() == []
+    assert view.order_successes == []
+    assert view.cancelled_count == 1
 
 
 def test_reserve_order_rejects_out_of_range_selection(tmp_path):
