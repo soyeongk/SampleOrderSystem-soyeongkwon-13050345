@@ -9,7 +9,6 @@ class MainView:
 
     def show_menu(self) -> None:
         clear_screen()
-        print()
         print("===== S-Semi 시료 생산주문관리 시스템 =====")
         print("1. 시료 등록")
         print("2. 시료 조회")

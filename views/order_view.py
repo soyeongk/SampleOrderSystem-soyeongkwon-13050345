@@ -13,7 +13,7 @@ class OrderView:
                 f"{i}. {sample.name} ({sample.sample_id}) | "
                 f"재고 {sample.stock_quantity} | 수율 {sample.yield_rate}"
             )
-        print(f"[페이지 {page.page_number}/{page.total_pages}] n: 다음, p: 이전, 번호: 선택")
+        print(f"[페이지 {page.page_number}/{page.total_pages}] n: 다음, p: 이전, b: 이전 메뉴로, 번호: 선택")
 
     def read_sample_page_command(self) -> str:
         return input("선택: ").strip()

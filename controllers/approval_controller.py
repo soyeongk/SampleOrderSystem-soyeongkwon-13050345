@@ -61,6 +61,8 @@ class ApprovalController:
             if command == "p":
                 page_number -= 1
                 continue
+            if command == "b":
+                return
 
             selected_order = resolve_page_selection(page, command)
             if selected_order is None:
