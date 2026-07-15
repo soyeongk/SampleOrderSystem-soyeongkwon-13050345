@@ -51,3 +51,48 @@
 - 이름 검색(시료 검색) 기능
 - Controller/View, 메인 메뉴 (슬라이스 2에서 진행)
 - `data/samples.json` 실제 운영 데이터 파일 — 테스트는 `tmp_path`만 사용하고, 실제 애플리케이션용 데이터 파일 경로 배선은 슬라이스 2(메인 메뉴 스켈레톤)에서 함께 진행
+
+**상태: GREEN 완료, REVIEW 승인 완료 (커밋 `929ba90`)**
+
+---
+
+## 슬라이스 2: 시료 조회/검색 컨트롤러 + 메인 메뉴 스켈레톤
+
+### PoC 재사용 방침
+- `ConsoleMVC`/`DataPersistence` PoC 저장소는 수정하지 않고, **참고용으로만** 열람한다.
+- **View**(`SampleView`, `MainView`): 순수 입출력(print/input)만 담당하고 분기 로직이 없으므로, ConsoleMVC PoC 코드를 이 저장소의 모듈 경로(`models`/`repository`가 아니라 `views`/`controllers`를 최상위에 둠)에 맞게 그대로 이식한다. 별도 테스트 없이 진행 (tdd-skill의 "설정/플러밍" 예외에 해당).
+- **Repository/Controller**(`SampleRepository.search_by_name`, `SampleRepository.generate_sample_id`, `SampleController`): 실제 로직(검증, 채번, 필터링)이 있으므로 PoC는 참고만 하고 이 저장소에서 TDD로 새로 작성한다.
+
+### 검증할 동작 (Behavior)
+
+1. `SampleRepository.generate_sample_id()`
+   - 저장소가 비어 있으면 `S-001`을 반환한다.
+   - 기존 시료가 `S-001`, `S-002`이면 `S-003`을 반환한다 (기존 최대 번호 다음).
+2. `SampleRepository.search_by_name(keyword)`
+   - 이름에 keyword가 포함된(대소문자 무시) 시료만 반환한다.
+   - 일치하는 것이 없으면 빈 리스트를 반환한다.
+3. `SampleController.register_sample()`
+   - 유효한 입력이면 `generate_sample_id()`로 채번한 뒤 저장소에 생성하고, View에 성공 메시지를 표시한다.
+   - 이름이 빈 문자열이면 저장하지 않고 View에 에러를 표시한다.
+   - 숫자 항목(평균 생산시간/수율/재고)이 숫자로 변환 불가능하면 저장하지 않고 View에 에러를 표시한다.
+   - 수율이 0~1 범위를 벗어나면 저장하지 않고 View에 에러를 표시한다.
+4. `SampleController.browse_samples()`
+   - 선택값이 "1"이면 전체 목록을 View에 표시한다.
+   - 선택값이 "2"이면 검색 키워드를 입력받아 그 결과를 View에 표시한다.
+
+### 작성할 테스트
+- `tests/repository/test_sample_repository.py`에 `generate_sample_id`, `search_by_name` 테스트 추가 (실제 `SampleRepository` + `tmp_path` 사용, mock 없음)
+- `tests/controllers/test_sample_controller.py` (신규)
+  - View는 mock/실제 콘솔 대신 **테스트용 Fake 객체**(고정된 입력을 반환하고 호출된 출력 메서드를 기록하는 간단한 스텁 클래스)를 사용한다 (tdd-skill "모든 것을 mock해야 한다 → DI를 사용하라" 가이드에 따름).
+  - Repository는 `tmp_path` 기반 실제 `SampleRepository` 사용 (mock 없음).
+
+### 프로덕션 코드 계획
+- `repository/sample_repository.py`에 `generate_sample_id()`, `search_by_name(keyword)` 메서드 추가
+- `controllers/__init__.py`, `controllers/sample_controller.py`: ConsoleMVC의 `SampleController` 로직을 이 저장소의 `SampleRepository` API(`create`/`get_all`/`generate_sample_id`/`search_by_name`)에 맞게 새로 작성
+- `views/__init__.py`, `views/sample_view.py`, `views/main_view.py`: ConsoleMVC PoC에서 그대로 이식 (import 경로만 조정, 테스트 없음)
+- `controllers/main_controller.py`, `main.py`: ConsoleMVC 패턴을 참고해 메인 메뉴 라우팅 스켈레톤 작성 (시료 등록/조회, 종료만 우선 연결. 주문 메뉴는 슬라이스 3에서 연결)
+
+### 이번 슬라이스 범위 밖
+- 시료 수정/삭제
+- 주문(Order) 메뉴 연결 (슬라이스 3)
+- `data/samples.json` 실제 배선 (main.py에서 고정 경로로 연결하되, 세부 데이터 시딩은 다루지 않음)

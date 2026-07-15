@@ -4,10 +4,10 @@ from models.sample import Sample
 from repository.sample_repository import SampleRepository
 
 
-def make_sample(sample_id="S-001", stock_quantity=100):
+def make_sample(sample_id="S-001", name="Wafer-A", stock_quantity=100):
     return Sample(
         sample_id=sample_id,
-        name="Wafer-A",
+        name=name,
         average_production_minutes=30.0,
         yield_rate=0.9,
         stock_quantity=stock_quantity,
@@ -42,3 +42,35 @@ def test_get_by_id_returns_none_when_not_found(tmp_path):
     repo = SampleRepository(file_path)
 
     assert repo.get_by_id("S-999") is None
+
+
+def test_generate_sample_id_returns_s001_when_empty(tmp_path):
+    repo = SampleRepository(tmp_path / "samples.json")
+
+    assert repo.generate_sample_id() == "S-001"
+
+
+def test_generate_sample_id_returns_next_after_existing_max(tmp_path):
+    repo = SampleRepository(tmp_path / "samples.json")
+    repo.create(make_sample(sample_id="S-001"))
+    repo.create(make_sample(sample_id="S-002"))
+
+    assert repo.generate_sample_id() == "S-003"
+
+
+def test_search_by_name_returns_matches_case_insensitive(tmp_path):
+    repo = SampleRepository(tmp_path / "samples.json")
+    repo.create(make_sample(sample_id="S-001", name="Silicon Wafer"))
+    repo.create(make_sample(sample_id="S-002", name="GaN Epitaxial"))
+
+    results = repo.search_by_name("wafer")
+
+    assert len(results) == 1
+    assert results[0].sample_id == "S-001"
+
+
+def test_search_by_name_returns_empty_list_when_no_match(tmp_path):
+    repo = SampleRepository(tmp_path / "samples.json")
+    repo.create(make_sample(sample_id="S-001", name="Silicon Wafer"))
+
+    assert repo.search_by_name("nonexistent") == []
