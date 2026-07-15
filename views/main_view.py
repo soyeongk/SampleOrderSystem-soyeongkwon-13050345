@@ -7,9 +7,13 @@ class MainView:
         print("===== S-Semi 시료 생산주문관리 시스템 =====")
         print(f"[ 현재 메뉴: {title} ]")
 
-    def show_menu(self) -> None:
+    def show_menu(self, status: dict) -> None:
         clear_screen()
         print("===== S-Semi 시료 생산주문관리 시스템 =====")
+        print(f"시스템 현황: {status['now'].strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"등록시료: {status['sample_count']}종   총 재고: {status['total_stock']}ea")
+        print(f"전체 주문: {status['total_orders']}건   생산라인: {status['waiting_production']}건 대기")
+        print()
         print("1. 시료 등록")
         print("2. 시료 조회")
         print("3. 시료 주문(예약)")

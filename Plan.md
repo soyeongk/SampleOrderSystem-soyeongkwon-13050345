@@ -639,3 +639,35 @@ DummyDataGenerator PoC의 더미 시료 생성 로직을 참고해 새로 작성
 
 ### 이번 슬라이스 범위 밖
 - 없음
+
+**상태: GREEN 완료, REVIEW 승인 완료 (커밋 `8c9aaae`)**
+
+---
+
+## 슬라이스 17: 메인 메뉴 상단 시스템 현황 표시
+
+메인 메뉴 화면 맨 위에 현재 날짜/시간, 등록 시료 수, 총 재고, 전체 주문 수(REJECTED 제외),
+생산라인 대기 건수를 표시한다.
+
+### 검증할 동작 (Behavior)
+
+`MainController.build_system_status()`
+
+- 등록 시료 수 = 저장된 시료 개수
+- 총 재고 = 모든 시료의 재고 합
+- 전체 주문 = `REJECTED`를 제외한 주문 건수
+- 생산라인 대기 = 생산 큐에 남아있는 항목 수
+
+### 작성한 테스트
+- `tests/controllers/test_main_controller.py` (신규): 실제 Repository(`tmp_path`) 사용, mock 없음
+  - 시료/주문/생산 큐가 비어 있을 때 모두 0
+  - 등록 시료 수와 총 재고 합산이 올바른지
+  - 전체 주문 집계에서 REJECTED가 제외되는지
+  - 생산 큐 대기 건수가 올바른지
+
+### 구현 내용
+- `controllers/main_controller.py`: `build_system_status()` 추가, `run()` 루프에서 매번 계산해 `show_menu()`에 전달
+- `views/main_view.py`: `show_menu(status)`가 상단에 시스템 현황을 출력하도록 변경 (테스트 없음, 순수 출력)
+
+### 이번 슬라이스 범위 밖
+- 없음

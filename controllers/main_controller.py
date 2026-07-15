@@ -28,6 +28,9 @@ class MainController:
         sample_repository = SampleRepository(samples_file_path)
         order_repository = OrderRepository(orders_file_path)
         production_queue_repository = ProductionQueueRepository(production_queue_file_path)
+        self.sample_repository = sample_repository
+        self.order_repository = order_repository
+        self.production_queue_repository = production_queue_repository
         self.sample_controller = SampleController(sample_repository, SampleView())
         self.order_controller = OrderController(order_repository, sample_repository, OrderView())
         self.approval_controller = ApprovalController(
@@ -53,10 +56,21 @@ class MainController:
             "9": "[Test용] 생산 시간 강제 경과",
         }
 
+    def build_system_status(self) -> dict:
+        samples = self.sample_repository.get_all()
+        orders = self.order_repository.get_all()
+        return {
+            "now": datetime.now(),
+            "sample_count": len(samples),
+            "total_stock": sum(s.stock_quantity for s in samples),
+            "total_orders": len([o for o in orders if o.status != "REJECTED"]),
+            "waiting_production": len(self.production_queue_repository.get_all()),
+        }
+
     def run(self) -> None:
         is_running = True
         while is_running:
-            self.main_view.show_menu()
+            self.main_view.show_menu(self.build_system_status())
             choice = self.main_view.read_menu_choice()
 
             if choice in self.menu_titles:
