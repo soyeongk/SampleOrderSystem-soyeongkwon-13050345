@@ -5,14 +5,16 @@ class ShipmentView:
     def show_shippable_page(self, page) -> None:
         clear_screen()
         print("--- 출고 처리 (CONFIRMED) ---")
+        print()
         if not page.items:
             print("출고 가능한 주문이 없습니다.")
-            return
-        for i, order in enumerate(page.items, start=1):
-            print(
-                f"{i}. {order.order_id} | 시료 {order.sample_id} | "
-                f"고객 {order.customer_name} | 수량 {order.quantity}"
-            )
+        else:
+            for i, order in enumerate(page.items, start=1):
+                print(
+                    f"{i}. {order.order_id} | 시료 {order.sample_id} | "
+                    f"고객 {order.customer_name} | 수량 {order.quantity}"
+                )
+        print()
         print(f"[페이지 {page.page_number}/{page.total_pages}] n: 다음, p: 이전, b: 이전 메뉴로, 번호: 선택")
 
     def read_page_command(self) -> str:

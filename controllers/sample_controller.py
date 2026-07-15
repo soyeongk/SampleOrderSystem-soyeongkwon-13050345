@@ -1,3 +1,4 @@
+from controllers.pagination import paginate
 from models.sample import Sample
 from repository.sample_repository import SampleRepository
 
@@ -42,9 +43,22 @@ class SampleController:
         choice = self.sample_view.read_lookup_choice()
 
         if choice == "1":
-            self.sample_view.show_sample_list(self.sample_repository.get_all())
+            samples = self.sample_repository.get_all()
         elif choice == "2":
             keyword = self.sample_view.read_search_keyword()
-            self.sample_view.show_sample_list(self.sample_repository.search_by_name(keyword))
+            samples = self.sample_repository.search_by_name(keyword)
         else:
-            self.sample_view.show_sample_list([])
+            samples = []
+
+        page_number = 1
+        while True:
+            page = paginate(samples, page_number)
+            self.sample_view.show_sample_page(page)
+            command = self.sample_view.read_sample_browse_command()
+
+            if command == "n":
+                page_number += 1
+            elif command == "p":
+                page_number -= 1
+            elif command == "b":
+                return
