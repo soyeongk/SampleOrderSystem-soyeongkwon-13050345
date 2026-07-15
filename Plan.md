@@ -172,3 +172,75 @@
 ### 이번 슬라이스 범위 밖
 - 생산 큐 실제 소비(FIFO 처리), 실 생산량/총 생산 시간 계산, PRODUCING→CONFIRMED 자동 전환 (슬라이스 5)
 - 모니터링, 출고 처리 (슬라이스 6~7)
+
+**상태: GREEN 완료, REVIEW 승인 완료 (커밋 `de76544`)**
+
+---
+
+## 슬라이스 4 설계 재검토 (사용자 피드백 반영)
+
+**문제 시나리오**: 재고 100, 주문1(수량 130) 승인 → 기존 설계는 재고를 즉시 0으로 확정하고 부족분(30)만 생산 큐에 등록. 이 상태에서 주문2(수량 10)가 들어오면, 실제 재고(100)가 아직 충분히 있었음에도 이미 0으로 확정되어 버려 불필요하게 별도 생산이 걸린다.
+
+**수정된 설계**: 승인 시점에 **재고가 부족해도 재고를 건드리지 않는다.** 그냥 주문을 `PRODUCING`으로 표시하고 큐에 "이 주문에 필요한 전체 수량"만 기록해둔다. 재고 차감/생산 필요량 계산은 **그 주문이 큐의 맨 앞(FIFO head)이 되어 실제로 생산이 시작되는 시점**에, 그 시점의 실제 재고를 기준으로 계산한다. 이렇게 하면:
+- 주문2(10개)는 주문1의 생산 여부와 무관하게, 승인 시점의 실제 재고(100)로 즉시 판단된다 → 재고 충분하면 그 자리에서 바로 `CONFIRMED` (큐에 들어가지도 않음).
+- 주문1의 생산이 끝나 재고가 늘어난 뒤에도, 다음 큐 항목이 있다면 그 시점의 재고로 다시 판단 → 이미 충분하면 추가 생산 없이 바로 `CONFIRMED` (연쇄 처리).
+
+**`ApprovalController.approve()` 변경 사항** (기존 리뷰 완료 동작 수정, git 히스토리는 그대로 두고 새 커밋으로 반영):
+- 재고 충분 시: 기존과 동일 (즉시 차감 + `CONFIRMED`)
+- 재고 부족 시: **재고를 건드리지 않고**, 생산 큐에 `{order_id, sample_id, quantity}` (부족분이 아니라 **주문 전체 수량**)만 등록 + 주문 상태 `PRODUCING`
+
+**받아들이는 트레이드오프**: 생산 큐에 들어간 주문을 위해 "예약"해두는 재고는 없다. 즉, 이론적으로 여러 승인이 동시에 같은 재고를 놓고 경쟁할 수 있지만(과도하게 약속된 상태), 이 프로젝트 규모의 콘솔 애플리케이션에서는 순차 처리이므로 실질적 문제가 되지 않는다.
+
+---
+
+## 슬라이스 5: 생산 라인
+
+### 설계 결정 (시간 처리)
+콘솔 앱이라 실제 백그라운드 스레드로 시간을 흘려보낼 수 없으므로, **"진행 상태를 확인하는 시점(현재 시각)"을 기준으로 경과 시간을 계산**하는 방식을 쓴다. 테스트 가능하도록 모든 시간 관련 메서드는 `now`를 인자로 주입받는다 (기존 `generate_order_id(base_time)`와 동일한 패턴).
+
+- 큐의 맨 앞(FIFO head) 항목이 "현재 생산 중" 대상이다.
+- head 항목이 아직 시작 전이면(`started_at is None`): 그 시점의 실제 재고와 비교한다.
+  - 재고가 이미 head의 필요 수량(`quantity`) 이상이면: 생산 없이 바로 재고 차감 + 주문 `CONFIRMED` + 큐에서 제거 → 다음 항목에 대해 같은 판단을 반복한다 (연쇄 처리).
+  - 재고가 부족하면: **그 시점 재고**로 부족분(`shortfall_quantity = quantity - 그 시점 재고`)을 계산하고, 실 생산량/총 생산 시간을 계산해 `started_at=now`와 함께 큐 항목에 저장한 뒤 멈춘다 (이 항목이 생산 중 상태가 됨).
+- 이미 시작된 head 항목은 경과 시간(`now - started_at`, 분)과 총 생산 시간을 비교한다.
+  - 미달이면 상태 유지 (주문은 계속 `PRODUCING`).
+  - 충족되면: 재고를 실 생산량만큼 증가시킨 뒤, 그 재고에서 head의 필요 수량(`quantity`)만큼 차감해 주문을 소진 처리, 주문 `CONFIRMED`, 큐에서 제거. 이후 다음 큐 항목에 대해 위 판단을 이어서 반복한다 (남은 잉여 재고로 바로 `CONFIRMED` 되거나, 부족하면 그 차이만큼만 새로 생산 시작 — 사용자가 요청한 시나리오가 여기서 해결됨).
+- **실 생산량** = `ceil(그 시점의 shortfall_quantity / 시료.수율)`, **총 생산 시간(분)** = `시료.평균생산시간 * 실생산량`.
+- 부분 생산량만으로는 완료되지 않는다는 요구사항은 "경과 시간 전부가 지나야 완료"라는 규칙으로 만족한다.
+
+### 검증할 동작 (Behavior)
+
+1. `ProductionQueueEntry`: `order_id`, `sample_id`, `quantity`(주문 전체 수량) + `started_at`, `shortfall_quantity`, `actual_quantity`, `total_production_minutes`(모두 기본값 `None`, 생산 시작 시 채워짐), JSON 직렬화 포함.
+2. `SampleRepository.increase_stock(sample_id, amount)`: 재고를 amount만큼 늘리고 영속화한다.
+3. `ProductionQueueRepository`: `update_entry(order_id, **changes)`(필드 갱신), `remove(order_id)`(제거) 추가.
+4. `ProductionLineController.advance(now)`
+   - 큐가 비어 있으면 아무 것도 하지 않는다.
+   - head가 미시작 상태이고 **현재 재고가 이미 충분**하면: 생산 없이 즉시 재고 차감 + `CONFIRMED` + 큐 제거 + 다음 항목도 계속 시도(연쇄).
+   - head가 미시작 상태이고 재고가 부족하면: 그 시점 재고로 부족분/실생산량/총생산시간을 계산해 저장, 이후 멈춘다.
+   - head가 시작됨 + 경과 시간 미달: 아무 것도 하지 않는다 (계속 `PRODUCING`).
+   - head가 시작됨 + 경과 시간 충족: 재고를 실생산량만큼 증가 → `quantity`만큼 차감 → `CONFIRMED` → 큐 제거 → 다음 항목에 대해 반복.
+5. `ProductionLineController.get_current_status(now)`: `advance(now)` 호출 후, 현재 생산 중(head, 시작된 상태) 항목 정보를 반환. 큐가 비어 있으면 `None`.
+6. `ProductionLineController.get_waiting_queue()`: head를 제외한 나머지를 FIFO 순서로 반환.
+
+### 작성할 테스트
+- `tests/controllers/test_approval_controller.py`: 재고 부족 케이스 기존 테스트를 새 동작(재고 불변, 큐에 `quantity` 전체 저장)으로 수정
+- `tests/repository/test_sample_repository.py`: `increase_stock` 테스트 추가
+- `tests/repository/test_production_queue_repository.py`: `update_entry`, `remove` 테스트 추가
+- `tests/controllers/test_production_line_controller.py` (신규): 실제 Repository(`tmp_path`) + 고정 `now` 값 사용, mock 없음
+  - 재고 부족 → 생산 시작(부족분/실생산량/총생산시간 계산, 재고 불변) 확인
+  - 경과 시간 미달 → 상태 유지
+  - 경과 시간 충족 → 완료 처리(재고 증가 후 quantity만큼 차감, CONFIRMED, 큐 제거)
+  - **사용자 시나리오**: 주문1 생산 완료 후 남은 잉여 재고로 다음 큐 항목(주문2)이 추가 생산 없이 바로 `CONFIRMED` 되는지
+  - 큐가 비었을 때 `get_current_status`가 `None`을 반환하는지
+
+### 프로덕션 코드 계획
+- `models/production_queue_entry.py`: 필드를 `order_id/sample_id/quantity/started_at/shortfall_quantity/actual_quantity/total_production_minutes`로 구성
+- `repository/sample_repository.py`: `increase_stock(sample_id, amount)` 추가
+- `repository/production_queue_repository.py`: `update_entry(order_id, **changes)`, `remove(order_id)` 추가
+- `controllers/approval_controller.py`: 재고 부족 분기를 위 설계대로 수정 (재고 불변, `quantity` 전체를 큐에 저장)
+- `controllers/production_line_controller.py` (신규): `advance`, `get_current_status`, `get_waiting_queue`
+- `views/production_view.py` (신규, 테스트 없음): 생산 현황(현재 생산 중 정보) + 대기 목록 출력
+- `controllers/main_controller.py`, `main.py`, `views/main_view.py`: "생산 라인 조회" 메뉴 연결 (조회 시 `datetime.now()`를 주입)
+
+### 이번 슬라이스 범위 밖
+- 모니터링, 출고 처리 (슬라이스 6~7)

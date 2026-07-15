@@ -96,12 +96,13 @@ def test_approve_enqueues_production_when_stock_insufficient(tmp_path):
     controller.approve("ORD-1")
 
     assert order_repo.get_all()[0].status == "PRODUCING"
-    assert sample_repo.get_by_id("S-001").stock_quantity == 0
+    assert sample_repo.get_by_id("S-001").stock_quantity == 5
     queued = queue_repo.get_all()
     assert len(queued) == 1
     assert queued[0].order_id == "ORD-1"
     assert queued[0].sample_id == "S-001"
-    assert queued[0].shortfall_quantity == 15
+    assert queued[0].quantity == 20
+    assert queued[0].started_at is None
 
 
 def test_reject_sets_rejected_status_without_touching_stock(tmp_path):
