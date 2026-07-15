@@ -7,18 +7,18 @@ from repository.sample_repository import SampleRepository
 
 
 class FakeApprovalView:
-    def __init__(self, target_order_id=None, decision=None):
-        self.shown_lists = []
-        self._target_order_id = target_order_id
+    def __init__(self, page_commands=None, decision=None):
+        self.shown_pages = []
+        self._page_commands = list(page_commands or [])
         self._decision = decision
         self.errors = []
         self.results = []
 
-    def show_pending_orders(self, orders):
-        self.shown_lists.append(orders)
+    def show_pending_page(self, page):
+        self.shown_pages.append(page)
 
-    def read_target_order_id(self):
-        return self._target_order_id
+    def read_page_command(self):
+        return self._page_commands.pop(0)
 
     def read_decision(self):
         return self._decision
@@ -117,9 +117,9 @@ def test_reject_sets_rejected_status_without_touching_stock(tmp_path):
     assert queue_repo.get_all() == []
 
 
-def test_handle_menu_approves_when_decision_is_1(tmp_path):
+def test_handle_menu_approves_selected_order_when_decision_is_1(tmp_path):
     controller, order_repo, _, _, view = make_controller(
-        tmp_path, target_order_id="ORD-1", decision="1"
+        tmp_path, page_commands=["1"], decision="1"
     )
 
     controller.handle_menu()
@@ -128,9 +128,9 @@ def test_handle_menu_approves_when_decision_is_1(tmp_path):
     assert view.results == [("ORD-1", "CONFIRMED")]
 
 
-def test_handle_menu_rejects_when_decision_is_2(tmp_path):
+def test_handle_menu_rejects_selected_order_when_decision_is_2(tmp_path):
     controller, order_repo, _, _, view = make_controller(
-        tmp_path, target_order_id="ORD-1", decision="2"
+        tmp_path, page_commands=["1"], decision="2"
     )
 
     controller.handle_menu()
@@ -139,9 +139,9 @@ def test_handle_menu_rejects_when_decision_is_2(tmp_path):
     assert view.results == [("ORD-1", "REJECTED")]
 
 
-def test_handle_menu_shows_error_for_unknown_order_id(tmp_path):
+def test_handle_menu_shows_error_for_out_of_range_selection(tmp_path):
     controller, order_repo, _, _, view = make_controller(
-        tmp_path, target_order_id="ORD-999", decision="1"
+        tmp_path, page_commands=["9"], decision="1"
     )
 
     controller.handle_menu()
@@ -152,10 +152,32 @@ def test_handle_menu_shows_error_for_unknown_order_id(tmp_path):
 
 def test_handle_menu_shows_error_for_invalid_decision(tmp_path):
     controller, order_repo, _, _, view = make_controller(
-        tmp_path, target_order_id="ORD-1", decision="9"
+        tmp_path, page_commands=["1"], decision="9"
     )
 
     controller.handle_menu()
 
     assert order_repo.get_all()[0].status == "RESERVED"
     assert len(view.errors) == 1
+
+
+def test_handle_menu_navigates_to_next_page_before_selecting(tmp_path):
+    controller, order_repo, sample_repo, queue_repo, view = make_controller(
+        tmp_path, page_commands=["n", "1"], decision="1"
+    )
+    for i in range(2, 13):
+        order_repo.create(
+            Order(
+                order_id=f"ORD-{i}",
+                sample_id="S-001",
+                customer_name="Other Corp",
+                quantity=1,
+                status="RESERVED",
+            )
+        )
+
+    controller.handle_menu()
+
+    assert len(view.shown_pages) == 2
+    statuses = {o.order_id: o.status for o in order_repo.get_all()}
+    assert statuses["ORD-11"] == "CONFIRMED"
