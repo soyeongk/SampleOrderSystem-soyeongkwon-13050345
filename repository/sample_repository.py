@@ -38,3 +38,10 @@ class SampleRepository:
             if sample.sample_id == sample_id:
                 sample.stock_quantity -= amount
         save_json(self.file_path, [s.to_dict() for s in samples])
+
+    def increase_stock(self, sample_id: str, amount: int) -> None:
+        samples = self.get_all()
+        for sample in samples:
+            if sample.sample_id == sample_id:
+                sample.stock_quantity += amount
+        save_json(self.file_path, [s.to_dict() for s in samples])

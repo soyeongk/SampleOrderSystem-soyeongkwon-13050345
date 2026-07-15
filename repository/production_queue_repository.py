@@ -14,3 +14,15 @@ class ProductionQueueRepository:
         entries.append(entry)
         save_json(self.file_path, [e.to_dict() for e in entries])
         return entry
+
+    def update_entry(self, order_id: str, **changes) -> None:
+        entries = self.get_all()
+        for entry in entries:
+            if entry.order_id == order_id:
+                for key, value in changes.items():
+                    setattr(entry, key, value)
+        save_json(self.file_path, [e.to_dict() for e in entries])
+
+    def remove(self, order_id: str) -> None:
+        entries = [e for e in self.get_all() if e.order_id != order_id]
+        save_json(self.file_path, [e.to_dict() for e in entries])
