@@ -31,6 +31,20 @@ class OrderView:
     def read_quantity(self) -> str:
         return input("주문 수량: ").strip()
 
+    def show_order_summary(self, sample, customer_name: str, quantity: int) -> None:
+        print()
+        print("--- 입력 내용 확인 ---")
+        print(f"시료: {sample.name} ({sample.sample_id})")
+        print(f"고객: {customer_name}")
+        print(f"수량: {quantity} ea")
+        print("[Y] 예약 접수  [N] 취소")
+
+    def read_confirmation(self) -> str:
+        return input("선택: ").strip()
+
+    def show_reservation_cancelled(self) -> None:
+        print("예약이 취소되었습니다.")
+
     def show_order_success(self, order) -> None:
         print(
             f"주문 예약 완료: {order.order_id} | 시료 {order.sample_id} | "

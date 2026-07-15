@@ -57,6 +57,12 @@ class OrderController:
             self.order_view.show_order_error("주문 수량은 1 이상이어야 합니다.")
             return
 
+        self.order_view.show_order_summary(selected_sample, customer_name, quantity)
+        confirmation = self.order_view.read_confirmation()
+        if confirmation.lower() != "y":
+            self.order_view.show_reservation_cancelled()
+            return
+
         order = Order(
             order_id=self.order_repository.generate_order_id(),
             sample_id=selected_sample.sample_id,
