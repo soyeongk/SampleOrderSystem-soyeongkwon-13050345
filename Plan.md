@@ -96,3 +96,38 @@
 - 시료 수정/삭제
 - 주문(Order) 메뉴 연결 (슬라이스 3)
 - `data/samples.json` 실제 배선 (main.py에서 고정 경로로 연결하되, 세부 데이터 시딩은 다루지 않음)
+
+**상태: GREEN 완료, REVIEW 승인 완료 (커밋 `2760aaf`)**
+
+---
+
+## 슬라이스 3: 주문(Order) 예약
+
+### PoC 재사용 방침에 대한 주의
+- `ConsoleMVC`의 `OrderController.reserve_order()`는 예약 시점에 재고를 확인해 즉시 `REJECTED`로 전환하고 재고를 차감하는데, 이는 **CLAUDE.md/PRD.md 최종 명세와 다르다** (주문 예약은 항상 `RESERVED`로 생성되고, 재고 확인·차감·REJECTED 전환은 슬라이스 4 "주문 승인/거절"의 책임). PoC 작성 시점과 최종 명세가 어긋난 부분이므로, 이번 슬라이스는 PoC 로직을 따르지 않고 CLAUDE.md 기준으로 새로 설계한다.
+- `DataPersistence`의 `Order` 모델(속성 구성, JSON 직렬화)과 순번 기반 주문번호 생성 방식은 그대로 참고한다.
+
+### 검증할 동작 (Behavior)
+
+1. `OrderRepository.generate_order_id()`
+   - `ORD-YYYYMMDD-HHMM-NN` 형식으로, 기존 주문번호와 겹치지 않게 순번을 붙여 생성한다 (DataPersistence와 동일 규칙).
+2. `OrderController.reserve_order()`
+   - 존재하는 시료 ID + 유효한 고객명 + 1 이상의 정수 수량이 입력되면, 상태 `RESERVED`인 주문을 생성하고 저장한다. 이 시점에는 재고를 확인하거나 차감하지 않는다.
+   - 존재하지 않는 시료 ID면 저장하지 않고 View에 에러를 표시한다.
+   - 고객명이 빈 문자열이면 저장하지 않고 View에 에러를 표시한다.
+   - 수량이 숫자로 변환 불가능하거나 0 이하이면 저장하지 않고 View에 에러를 표시한다.
+
+### 작성할 테스트
+- `tests/repository/test_order_repository.py` (신규): `create`/`get_all`/`generate_order_id`에 대해 Sample과 동일한 방식으로 검증 (mock 없이 `tmp_path` 사용)
+- `tests/controllers/test_order_controller.py` (신규): `FakeOrderView` + 실제 `SampleRepository`/`OrderRepository`(`tmp_path`) 사용, mock 없음
+
+### 프로덕션 코드 계획
+- `models/order.py`: `Order` dataclass(`order_id`, `sample_id`, `customer_name`, `quantity`, `status`) + `to_dict`/`from_dict` (DataPersistence 참고)
+- `repository/order_repository.py`: `OrderRepository(file_path)` — `create`(중복 ID 시 `ValueError`), `get_all`, `generate_order_id()` (DataPersistence의 순번 suffix 로직 참고)
+- `controllers/order_controller.py`: `OrderController(order_repository, sample_repository, order_view)` — `reserve_order()`를 CLAUDE.md 기준(항상 RESERVED, 재고 미확인)으로 새로 작성
+- `views/order_view.py`: ConsoleMVC PoC에서 이식 (순수 입출력, 테스트 없음)
+- `controllers/main_controller.py`, `main.py`, `views/main_view.py`: 주문 메뉴("3. 시료 주문(예약)") 연결, 종료 메뉴 번호를 "4"로 조정
+
+### 이번 슬라이스 범위 밖
+- 주문 승인/거절, 재고 확인·차감 (슬라이스 4)
+- 생산 라인, 모니터링, 출고 처리 (슬라이스 5~7)
