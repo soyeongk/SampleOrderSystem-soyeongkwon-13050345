@@ -25,4 +25,12 @@ def test_pad_fills_based_on_display_width_for_korean():
 def test_pad_does_not_truncate_when_text_exceeds_width():
     result = pad("실리콘 웨이퍼-12인치", 5)
 
-    assert result == "실리콘 웨이퍼-12인치"
+    assert result.startswith("실리콘 웨이퍼-12인치")
+
+
+def test_pad_keeps_minimum_gap_when_text_reaches_or_exceeds_width():
+    exact_fit = pad("게르마늄 웨이퍼-4인치", 20)  # display width exactly 20
+    overflow = pad("실리콘 웨이퍼-12인치", 5)
+
+    assert exact_fit.endswith("  ")
+    assert overflow.endswith("  ")
